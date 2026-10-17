@@ -45,6 +45,11 @@ _NEW_TABLES: tuple[tuple[str, str], ...] = (
 _BOOK_SHELF_COLUMN = "shelf_id"
 _BOOK_SHELF_DDL = "ALTER TABLE book ADD COLUMN shelf_id INTEGER REFERENCES shelf(id)"
 
+_BOOK_COVER_DDL: tuple[tuple[str, str], ...] = (
+    ("cover_file", "ALTER TABLE book ADD COLUMN cover_file TEXT"),
+    ("cover_color", "ALTER TABLE book ADD COLUMN cover_color TEXT"),
+)
+
 
 def _table_names(conn: sqlite3.Connection) -> set[str]:
     rows = conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
@@ -74,9 +79,15 @@ def upgrade(conn: sqlite3.Connection) -> list[str]:
                 conn.execute(ddl)
                 changes.append(f"table:{name}")
 
-        if "book" in tables and _BOOK_SHELF_COLUMN not in _column_names(conn, "book"):
-            conn.execute(_BOOK_SHELF_DDL)
-            changes.append(f"column:book.{_BOOK_SHELF_COLUMN}")
+        if "book" in tables:
+            book_columns = _column_names(conn, "book")
+            if _BOOK_SHELF_COLUMN not in book_columns:
+                conn.execute(_BOOK_SHELF_DDL)
+                changes.append(f"column:book.{_BOOK_SHELF_COLUMN}")
+            for column, ddl in _BOOK_COVER_DDL:
+                if column not in book_columns:
+                    conn.execute(ddl)
+                    changes.append(f"column:book.{column}")
 
         conn.execute("COMMIT")
     except BaseException:

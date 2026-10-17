@@ -47,7 +47,9 @@ CREATE TABLE IF NOT EXISTS book (
     created_at TEXT,
     updated_at TEXT,
     deleted_at TEXT,
-    shelf_id INTEGER REFERENCES shelf(id)
+    shelf_id INTEGER REFERENCES shelf(id),
+    cover_file TEXT,
+    cover_color TEXT
 );
 
 CREATE TABLE IF NOT EXISTS book_type (
