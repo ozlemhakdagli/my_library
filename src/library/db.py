@@ -20,6 +20,22 @@ CREATE TABLE IF NOT EXISTS author (
     deleted_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS shelf (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    norm_name TEXT NOT NULL,
+    created_at TEXT,
+    deleted_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS type (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    norm_name TEXT NOT NULL,
+    created_at TEXT,
+    deleted_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS book (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
@@ -30,7 +46,14 @@ CREATE TABLE IF NOT EXISTS book (
     note TEXT,
     created_at TEXT,
     updated_at TEXT,
-    deleted_at TEXT
+    deleted_at TEXT,
+    shelf_id INTEGER REFERENCES shelf(id)
+);
+
+CREATE TABLE IF NOT EXISTS book_type (
+    book_id INTEGER NOT NULL REFERENCES book(id),
+    type_id INTEGER NOT NULL REFERENCES type(id),
+    PRIMARY KEY (book_id, type_id)
 );
 
 CREATE TABLE IF NOT EXISTS book_author (
