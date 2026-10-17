@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ t("title_review") }}{% endblock %}
+{% block content %}
+<h1>{{ t("title_review") }}</h1>
+
+{% if items %}
+<ul class="book-list">
+  {% for item in items %}
+  <li class="book" data-review-id="{{ item.id }}">
+    <div class="book-title">
+      {% if item.book_id %}{{ item.title }}{% else %}{{ t("unreadable_title") }}{% endif %}
+    </div>
+    <div class="book-meta">
+      <span>{{ t("field_reason") }}: {{ item.reason_label }}</span>
+      {% if item.photo_file %}<span>{{ t("field_photo") }}: {{ item.photo_file }}</span>{% endif %}
+    </div>
+    <div class="actions">
+      <form method="post" action="/review/{{ item.id }}?lang={{ lang }}">
+        <button type="submit" name="action" value="confirm">{{ t("btn_confirm") }}</button>
+        <button type="submit" name="action" value="not_a_book">{{ t("btn_not_a_book") }}</button>
+      </form>
+      {% if item.book_id %}<a href="/books/{{ item.book_id }}/edit?lang={{ lang }}">{{ t("btn_correct") }}</a>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if has_prev or has_next %}
+<nav class="pager">
+  {% if has_prev %}<a href="/review?page={{ page - 1 }}&amp;lang={{ lang }}">{{ t("pager_prev") }}</a>{% endif %}
+  <span>{{ page }}</span>
+  {% if has_next %}<a href="/review?page={{ page + 1 }}&amp;lang={{ lang }}">{{ t("btn_next") }}</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<p class="empty">{{ t("review_empty") }}</p>
+{% endif %}
+{% endblock %}

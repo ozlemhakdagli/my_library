@@ -1,6 +1,7 @@
 import math
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from datetime import date
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import urlencode
@@ -14,7 +15,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from library import db
 from library.config import Settings
-from library.db import READING_STATUSES
+from library.db import READING_STATUSES, LoanError, ReviewError
 from library.i18n import SUPPORTED_LANGS, resolve_lang, translate
 
 WEB_DIR = Path(__file__).parent
@@ -363,5 +364,126 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
         return RedirectResponse(f"/books/{book_id}", status_code=303)
+
+    def loans_view(
+        request: Request, lang: str | None, error: str | None = None, status_code: int = 200
+    ) -> HTMLResponse:
+        with _open_db(settings) as conn:
+            loans = db.open_loans(conn)
+        return render(
+            request,
+            "loans.html",
+            lang,
+            status_code=status_code,
+            loans=loans,
+            today=date.today().isoformat(),
+            error=error,
+        )
+
+    @app.get("/loans", response_class=HTMLResponse)
+    def loans_page(request: Request, lang: str | None = None) -> HTMLResponse:
+        return loans_view(request, lang)
+
+    @app.post("/loans", response_model=None)
+    def loan_lend(
+        request: Request,
+        book_id: Annotated[int, Form()],
+        borrower: Annotated[str, Form()] = "",
+        lent_on: Annotated[str, Form()] = "",
+        lang: str | None = None,
+    ) -> HTMLResponse | RedirectResponse:
+        t = translator(request, lang)
+        if not borrower.strip() or not lent_on.strip():
+            return loans_view(request, lang, t("err_invalid"), status_code=400)
+        with _open_db(settings) as conn:
+            if db.get_book(conn, book_id) is None:
+                raise HTTPException(status_code=404, detail=t("msg_not_found"))
+            try:
+                db.lend_book(conn, book_id, borrower, lent_on)
+            except LoanError:
+                error, status = t("err_already_lent"), 409
+            except ValueError:
+                error, status = t("err_invalid"), 400
+            else:
+                return RedirectResponse("/loans", status_code=303)
+        return loans_view(request, lang, error, status_code=status)
+
+    @app.post("/loans/{loan_id}/return", response_model=None)
+    def loan_return(
+        request: Request,
+        loan_id: int,
+        returned_on: Annotated[str, Form()] = "",
+        lang: str | None = None,
+    ) -> HTMLResponse | RedirectResponse:
+        t = translator(request, lang)
+        if not returned_on.strip():
+            return loans_view(request, lang, t("err_invalid"), status_code=400)
+        with _open_db(settings) as conn:
+            try:
+                db.return_book(conn, loan_id, returned_on)
+            except LoanError:
+                error, status = t("err_already_returned"), 409
+            except ValueError:
+                # return_book raises ValueError only when the loan does not exist.
+                raise HTTPException(status_code=404, detail=t("msg_not_found")) from None
+            else:
+                return RedirectResponse("/loans", status_code=303)
+        return loans_view(request, lang, error, status_code=status)
+
+    def reason_label(reason: str, t: Callable[..., str]) -> str:
+        keys = {
+            "low confidence": "reason_low_confidence",
+            "medium confidence": "reason_medium_confidence",
+            "author missing": "reason_author_missing",
+            "unreadable": "reason_unreadable",
+        }
+        parts = [p.strip() for p in reason.split(",") if p.strip()]
+        return ", ".join(t(keys[p]) if p in keys else p for p in parts)
+
+    @app.get("/review", response_class=HTMLResponse)
+    def review_page(
+        request: Request,
+        page: int = Query(1, ge=1),
+        lang: str | None = None,
+    ) -> HTMLResponse:
+        t = translator(request, lang)
+        with _open_db(settings) as conn:
+            # One extra row tells whether a next page exists.
+            rows = db.list_review_items(
+                conn, limit=PAGE_SIZE + 1, offset=(page - 1) * PAGE_SIZE
+            )
+        has_next = len(rows) > PAGE_SIZE
+        items = [
+            {**row, "reason_label": reason_label(row["reason"], t)}
+            for row in rows[:PAGE_SIZE]
+        ]
+        return render(
+            request,
+            "review.html",
+            lang,
+            items=items,
+            page=page,
+            has_prev=page > 1,
+            has_next=has_next,
+        )
+
+    @app.post("/review/{item_id}", response_model=None)
+    def review_resolve(
+        request: Request,
+        item_id: int,
+        action: Annotated[str, Form()] = "",
+        lang: str | None = None,
+    ) -> RedirectResponse:
+        t = translator(request, lang)
+        with _open_db(settings) as conn:
+            try:
+                db.resolve_review_item(conn, item_id, action)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=t("err_invalid")) from None
+            except LookupError:
+                raise HTTPException(status_code=404, detail=t("msg_not_found")) from None
+            except ReviewError:
+                raise HTTPException(status_code=409, detail=t("err_already_resolved")) from None
+        return RedirectResponse("/review", status_code=303)
 
     return app

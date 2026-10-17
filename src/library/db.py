@@ -77,9 +77,14 @@ CREATE TABLE IF NOT EXISTS review_item (
     id INTEGER PRIMARY KEY,
     book_id INTEGER REFERENCES book(id),
     reason TEXT NOT NULL,
-    photo_file TEXT
+    photo_file TEXT,
+    resolved_at TEXT,
+    resolution TEXT
 );
 """
+
+# Columns added after the first schema version; databases created earlier get them via ALTER.
+_REVIEW_ITEM_ADDED_COLUMNS = ("resolved_at", "resolution")
 
 
 def connect(path: str) -> sqlite3.Connection:
@@ -92,6 +97,11 @@ def connect(path: str) -> sqlite3.Connection:
 
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    existing = {r["name"] for r in conn.execute("PRAGMA table_info(review_item)")}
+    for column in _REVIEW_ITEM_ADDED_COLUMNS:
+        if column not in existing:
+            conn.execute(f"ALTER TABLE review_item ADD COLUMN {column} TEXT")
+    conn.commit()
 
 
 REVIEW_STATUSES = ("ok", "needs review")
@@ -627,3 +637,74 @@ def list_loans(conn: sqlite3.Connection, book_id: int) -> list[dict]:
         (book_id,),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+REVIEW_ACTIONS = ("confirm", "not_a_book")
+
+
+class ReviewError(Exception):
+    """A review item was already resolved."""
+
+
+def list_review_items(conn: sqlite3.Connection, limit: int = 50, offset: int = 0) -> list[dict]:
+    """Open review items, oldest first.
+
+    `title` is the book's title, or None for an unreadable record (book_id is None);
+    the caller shows the translated label for that case.
+    """
+    rows = conn.execute(
+        "SELECT r.id, r.book_id, r.photo_file, r.reason, b.title "
+        "FROM review_item r LEFT JOIN book b ON b.id = r.book_id "
+        "WHERE r.resolved_at IS NULL ORDER BY r.id LIMIT ? OFFSET ?",
+        (limit, offset),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def resolve_review_item(conn: sqlite3.Connection, item_id: int, action: str) -> None:
+    """Close a review item and record the action in history.
+
+    "confirm" sets a linked book's review_status to "ok". "not_a_book" closes the
+    item only; the book row is kept. Nothing is physically deleted.
+    """
+    if action not in REVIEW_ACTIONS:
+        raise ValueError(f"invalid review action: {action!r}")
+    ts = _now()
+
+    with conn:
+        item = conn.execute(
+            "SELECT id, book_id, resolved_at FROM review_item WHERE id = ?", (item_id,)
+        ).fetchone()
+        if item is None:
+            raise LookupError(f"review item {item_id} not found")
+        if item["resolved_at"] is not None:
+            raise ReviewError("already resolved")
+        book_id = item["book_id"]
+
+        if book_id is not None and action == "confirm":
+            book = conn.execute(
+                "SELECT review_status FROM book WHERE id = ?", (book_id,)
+            ).fetchone()
+            if book is not None and book["review_status"] != "ok":
+                conn.execute(
+                    "UPDATE book SET review_status = 'ok', updated_at = ? WHERE id = ?",
+                    (ts, book_id),
+                )
+                _write_history(
+                    conn,
+                    book_id,
+                    [HistoryEntry("review_status", book["review_status"], "ok")],
+                    ts,
+                )
+
+        conn.execute(
+            "UPDATE review_item SET resolved_at = ?, resolution = ? WHERE id = ?",
+            (ts, action, item_id),
+        )
+        conn.execute(
+            "INSERT INTO history (record_type, record_id, field, old_value, new_value, changed_at) "
+            "VALUES ('review_item', ?, 'resolution', NULL, ?, ?)",
+            (item_id, action, ts),
+        )
+        if book_id is not None:
+            _write_history(conn, book_id, [HistoryEntry("review_resolution", None, action)], ts)
