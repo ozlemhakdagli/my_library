@@ -7,6 +7,7 @@ class Settings:
     port: int
     db_path: str
     default_lang: str
+    backup_dir: str = "/data/backups"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -14,4 +15,5 @@ class Settings:
             port=int(os.environ.get("LIBRARY_PORT", "8765")),
             db_path=os.environ.get("LIBRARY_DB", "/data/library.db"),
             default_lang=os.environ.get("LIBRARY_DEFAULT_LANG", "en"),
+            backup_dir=os.environ.get("LIBRARY_BACKUP_DIR", "/data/backups"),
         )

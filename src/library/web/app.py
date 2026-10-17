@@ -1,19 +1,21 @@
 import math
+import tempfile
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import urlencode
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from library import db
+from library.backup import export_csv, make_backup
 from library.config import Settings
 from library.db import READING_STATUSES, LoanError, ReviewError
 from library.i18n import SUPPORTED_LANGS, resolve_lang, translate
@@ -485,5 +487,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except ReviewError:
                 raise HTTPException(status_code=409, detail=t("err_already_resolved")) from None
         return RedirectResponse("/review", status_code=303)
+
+    @app.get("/settings", response_class=HTMLResponse)
+    def settings_page(request: Request, lang: str | None = None) -> HTMLResponse:
+        return render(request, "settings.html", lang, backup_path=None)
+
+    @app.post("/settings/backup", response_class=HTMLResponse)
+    def settings_backup(request: Request, lang: str | None = None) -> HTMLResponse:
+        with _open_db(settings):
+            pass  # make sure the schema exists so the copy is a usable database
+        path = make_backup(settings.db_path, settings.backup_dir, datetime.now())
+        return render(request, "settings.html", lang, backup_path=path)
+
+    @app.get("/settings/export.csv")
+    def settings_export_csv() -> Response:
+        with tempfile.TemporaryDirectory() as tmp_dir, _open_db(settings) as conn:
+            out_path = str(Path(tmp_dir) / "books.csv")
+            export_csv(conn, out_path)
+            content = Path(out_path).read_bytes()
+        return Response(
+            content,
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="library.csv"'},
+        )
+
+    @app.post("/settings/language", response_model=None)
+    def settings_language(
+        request: Request,
+        value: Annotated[str, Form(alias="lang")] = "",
+    ) -> RedirectResponse:
+        if value not in SUPPORTED_LANGS:
+            t = translator(request, None)
+            raise HTTPException(status_code=400, detail=t("err_invalid"))
+        response = RedirectResponse(f"/settings?lang={value}", status_code=303)
+        response.set_cookie("lang", value, samesite="lax")
+        return response
 
     return app

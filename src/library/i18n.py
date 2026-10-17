@@ -100,6 +100,16 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "reason_medium_confidence": "medium confidence",
         "reason_author_missing": "author missing",
         "reason_unreadable": "unreadable",
+        # settings
+        "settings_backup_title": "Backup",
+        "settings_backup_help": "Save a copy of the database file to the backup folder.",
+        "settings_backup_done": "Backup saved to {path}",
+        "settings_export_title": "CSV export",
+        "settings_export_help": "Download all books (deleted books are not included) as a CSV file.",
+        "settings_language_title": "Language",
+        "settings_language_label": "Interface language",
+        "lang_name_en": "English",
+        "lang_name_tr": "Türkçe",
     },
     "tr": {
         # navigation
@@ -200,6 +210,16 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "reason_medium_confidence": "orta güven",
         "reason_author_missing": "yazar eksik",
         "reason_unreadable": "okunamadı",
+        # settings
+        "settings_backup_title": "Yedek",
+        "settings_backup_help": "Veritabanı dosyasının bir kopyasını yedek klasörüne kaydeder.",
+        "settings_backup_done": "Yedek kaydedildi: {path}",
+        "settings_export_title": "CSV dışa aktarma",
+        "settings_export_help": "Tüm kitapları (silinenler dahil değil) CSV dosyası olarak indirir.",
+        "settings_language_title": "Dil",
+        "settings_language_label": "Arayüz dili",
+        "lang_name_en": "English",
+        "lang_name_tr": "Türkçe",
     },
 }
 
