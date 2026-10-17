@@ -56,6 +56,9 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "not_on_loan": "Not on loan",
         # book detail
         "btn_edit": "Edit",
+        "btn_mark_read": "Mark as read",
+        "btn_start_reading": "Start reading",
+        "btn_abandon": "Abandon",
         "field_started": "Started",
         "field_finished": "Finished",
         "history_title": "Change history",
@@ -96,6 +99,9 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "err_already_lent": "This book is already on loan.",
         "err_already_returned": "This loan was already returned.",
         "err_invalid": "Invalid input.",
+        "err_invalid_date": "Use the date format YYYY-MM-DD.",
+        "err_future_date": "The date cannot be in the future.",
+        "err_finished_before_started": "The finish date cannot be before the start date.",
         # review queue
         "review_empty": "The review queue is empty.",
         "unreadable_title": "[unreadable]",
@@ -176,6 +182,9 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "not_on_loan": "Ödünçte değil",
         # book detail
         "btn_edit": "Düzenle",
+        "btn_mark_read": "Okundu olarak işaretle",
+        "btn_start_reading": "Okumaya başla",
+        "btn_abandon": "Yarım bırak",
         "field_started": "Başlangıç",
         "field_finished": "Bitiş",
         "history_title": "Değişiklik geçmişi",
@@ -216,6 +225,9 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "err_already_lent": "Bu kitap zaten ödünçte.",
         "err_already_returned": "Bu ödünç zaten iade alındı.",
         "err_invalid": "Geçersiz giriş.",
+        "err_invalid_date": "Tarihi YYYY-AA-GG biçiminde girin.",
+        "err_future_date": "Tarih gelecekte olamaz.",
+        "err_finished_before_started": "Bitiş tarihi başlangıç tarihinden önce olamaz.",
         # review queue
         "review_empty": "İnceleme kuyruğu boş.",
         "unreadable_title": "[okunamadı]",

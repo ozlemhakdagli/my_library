@@ -9,14 +9,8 @@
     <span class="badge">{{ t("field_shelf") }}: {{ book.shelf or t("book_no_shelf") }}</span>
     {% for type_name in book.types %}<span class="badge">{{ type_name }}</span>{% endfor %}
   </div>
+  {% include "_status.html" %}
   <div class="flex flex-wrap gap-2">
-    {% if book.status == "read" %}
-      <span class="badge">{{ t("status_read") }}{% if book.finished_on %} · {{ book.finished_on }}{% endif %}</span>
-    {% elif book.status %}
-      <span class="badge">{{ t("status_" ~ book.status) }}</span>
-    {% else %}
-      <span class="badge">{{ t("status_unread") }}</span>
-    {% endif %}
     {% if book.loan %}<span class="badge">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
     {% if book.review_status == "needs review" %}<span class="badge warn">{{ t("needs_review") }}</span>{% endif %}
   </div>

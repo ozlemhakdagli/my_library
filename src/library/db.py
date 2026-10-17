@@ -1,7 +1,7 @@
 import sqlite3
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from library.norm import norm
 
@@ -536,6 +536,25 @@ class LoanError(Exception):
     """A loan operation conflicts with the current loan state."""
 
 
+class ReadingDateError(ValueError):
+    """A reading date is invalid. ``code`` is the i18n message key for it."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def _parse_reading_date(value: str, today: date | None = None) -> date:
+    """Parse a YYYY-MM-DD date. With ``today``, also reject dates after it."""
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        raise ReadingDateError("err_invalid_date") from None
+    if today is not None and parsed > today:
+        raise ReadingDateError("err_future_date")
+    return parsed
+
+
 def _open_loan(conn: sqlite3.Connection, book_id: int) -> sqlite3.Row | None:
     return conn.execute(
         "SELECT id FROM loan WHERE book_id = ? AND returned_on IS NULL", (book_id,)
@@ -548,15 +567,24 @@ def set_reading_status(
     status: str,
     started_on: str | None = None,
     finished_on: str | None = None,
+    today: date | None = None,
 ) -> None:
     """Set reading status and dates; one history row per changed field.
 
-    An empty or missing date keeps the stored value.
+    An empty or missing date keeps the stored value. Given dates must be
+    YYYY-MM-DD and not after ``today`` (default: the current date). The
+    finished date may not be earlier than the started date. Invalid dates
+    raise ``ReadingDateError`` (a ``ValueError``) and nothing is written.
     """
     if status not in READING_STATUSES:
         raise ValueError(f"invalid status: {status!r}")
     started_text = _text(started_on)
     finished_text = _text(finished_on)
+    if today is None:
+        today = date.today()
+    for given in (started_text, finished_text):
+        if given is not None:
+            _parse_reading_date(given, today)
     ts = _now()
 
     with conn:
@@ -578,6 +606,11 @@ def set_reading_status(
                 finished_text if finished_text is not None else old_values["finished_on"]
             ),
         }
+        if new_values["started_on"] and new_values["finished_on"]:
+            started_day = _parse_reading_date(new_values["started_on"])
+            finished_day = _parse_reading_date(new_values["finished_on"])
+            if finished_day < started_day:
+                raise ReadingDateError("err_finished_before_started")
         changed = [f for f in new_values if new_values[f] != old_values[f]]
         if not changed:
             return

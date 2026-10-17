@@ -14,7 +14,7 @@
   <dd>{{ book.note }}</dd>
   {% endif %}
   <dt>{{ t("field_status") }}</dt>
-  <dd>{{ t("status_" ~ (book.status or "unread")) }}</dd>
+  <dd>{% include "_status.html" %}</dd>
   <dt>{{ t("field_loan") }}</dt>
   <dd>{% if book.loan %}{{ book.loan.borrower }}{% else %}{{ t("not_on_loan") }}{% endif %}</dd>
   {% if book.review_status == "needs review" %}

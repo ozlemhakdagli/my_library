@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from library import db
 from library.backup import export_csv, make_backup
 from library.config import Settings
-from library.db import READING_STATUSES, LoanError, ReviewError
+from library.db import READING_STATUSES, LoanError, ReadingDateError, ReviewError
 from library.i18n import SUPPORTED_LANGS, resolve_lang, translate
 
 WEB_DIR = Path(__file__).parent
@@ -147,7 +147,13 @@ def _card_extras(conn: sqlite3.Connection, book_ids: list[int]) -> dict[int, dic
     return extras
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+# Quick status action -> reading status it sets.
+QUICK_STATUS_ACTIONS = {"read": "read", "reading": "reading", "abandon": "abandoned"}
+
+
+def create_app(
+    settings: Settings | None = None, today_fn: Callable[[], date] = date.today
+) -> FastAPI:
     if settings is None:
         settings = Settings.from_env()
 
@@ -419,19 +425,76 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.post("/books/{book_id}/status")
     def book_status(
+        request: Request,
         book_id: int,
         status: Annotated[str, Form()] = "",
         started_on: Annotated[str, Form()] = "",
         finished_on: Annotated[str, Form()] = "",
+        lang: str | None = None,
     ) -> RedirectResponse:
         with _open_db(settings) as conn:
             if db.get_book(conn, book_id) is None:
                 raise HTTPException(status_code=404)
             try:
                 db.set_reading_status(conn, book_id, status, started_on, finished_on)
+            except ReadingDateError as exc:
+                raise HTTPException(
+                    status_code=400, detail=translator(request, lang)(exc.code)
+                ) from exc
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
         return RedirectResponse(f"/books/{book_id}", status_code=303)
+
+    @app.post("/books/{book_id}/status/quick", response_model=None)
+    def book_status_quick(
+        request: Request,
+        book_id: int,
+        action: Annotated[str, Form()] = "",
+        lang: str | None = None,
+    ) -> HTMLResponse:
+        """Quick status buttons. Returns the _status.html fragment for HTMX and plain requests."""
+        t = translator(request, lang)
+        error: str | None = None
+        status_code = 200
+        with _open_db(settings) as conn:
+            if db.get_book(conn, book_id) is None:
+                raise HTTPException(status_code=404, detail=t("msg_not_found"))
+            if action not in QUICK_STATUS_ACTIONS:
+                error, status_code = t("err_invalid"), 400
+            else:
+                today = today_fn()
+                current = conn.execute(
+                    "SELECT started_on, finished_on FROM reading_status WHERE book_id = ?",
+                    (book_id,),
+                ).fetchone()
+                # Today fills an empty date only; a stored date is kept by passing None.
+                started_on = finished_on = None
+                if action == "reading" and (current is None or not current["started_on"]):
+                    started_on = today.isoformat()
+                if action == "read" and (current is None or not current["finished_on"]):
+                    finished_on = today.isoformat()
+                try:
+                    db.set_reading_status(
+                        conn,
+                        book_id,
+                        QUICK_STATUS_ACTIONS[action],
+                        started_on,
+                        finished_on,
+                        today=today,
+                    )
+                except ReadingDateError as exc:
+                    error, status_code = t(exc.code), 400
+            row = conn.execute(
+                "SELECT status, finished_on FROM reading_status WHERE book_id = ?", (book_id,)
+            ).fetchone()
+        book = {
+            "id": book_id,
+            "status": row["status"] if row is not None else None,
+            "finished_on": row["finished_on"] if row is not None else None,
+        }
+        return render(
+            request, "_status.html", lang, status_code=status_code, book=book, error=error
+        )
 
     def loans_view(
         request: Request, lang: str | None, error: str | None = None, status_code: int = 200
