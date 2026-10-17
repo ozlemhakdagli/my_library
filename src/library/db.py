@@ -263,6 +263,8 @@ def _book_to_dict(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "started_on": status["started_on"] if status is not None else None,
         "finished_on": status["finished_on"] if status is not None else None,
         "loan": dict(loan) if loan is not None else None,
+        "cover_file": row["cover_file"],
+        "cover_color": row["cover_color"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -945,6 +947,24 @@ def set_book_shelf(conn: sqlite3.Connection, book_id: int, shelf_id: int | None)
         _write_history(conn, book_id, [HistoryEntry("shelf", old_name, new_name)], ts)
 
 
+def set_book_cover(
+    conn: sqlite3.Connection, book_id: int, cover_file: str, cover_color: str
+) -> None:
+    """Store a book's cover file name and colour. Always writes one 'cover' history row."""
+    ts = _now()
+    with conn:
+        book = _live_book(conn, book_id)
+        if book is None:
+            raise ValueError(f"book {book_id} not found")
+        conn.execute(
+            "UPDATE book SET cover_file = ?, cover_color = ?, updated_at = ? WHERE id = ?",
+            (cover_file, cover_color, ts, book_id),
+        )
+        _write_history(
+            conn, book_id, [HistoryEntry("cover", book["cover_file"], cover_file)], ts
+        )
+
+
 def set_book_types(conn: sqlite3.Connection, book_id: int, type_ids: list[int]) -> None:
     """Replace a book's live types with `type_ids`. One 'type' history row per added or removed type.
 
@@ -994,16 +1014,29 @@ def get_reading_status(conn: sqlite3.Connection, book_id: int) -> dict | None:
 
 
 def book_card_extras(conn: sqlite3.Connection, book_ids: Sequence[int]) -> dict[int, dict]:
-    """Shelf name, live type names and finished date for list cards, keyed by book id.
+    """Shelf name, live type names, finished date and cover fields for cards, keyed by book id.
 
     Kept apart from list_books, which only takes filter parameters.
     """
     extras: dict[int, dict] = {
-        book_id: {"shelf": None, "types": [], "finished_on": None} for book_id in book_ids
+        book_id: {
+            "shelf": None,
+            "types": [],
+            "finished_on": None,
+            "cover_file": None,
+            "cover_color": None,
+        }
+        for book_id in book_ids
     }
     if not book_ids:
         return extras
     marks = ", ".join("?" for _ in book_ids)
+    for row in conn.execute(
+        f"SELECT id, cover_file, cover_color FROM book WHERE id IN ({marks})",
+        list(book_ids),
+    ):
+        extras[row["id"]]["cover_file"] = row["cover_file"]
+        extras[row["id"]]["cover_color"] = row["cover_color"]
     for row in conn.execute(
         f"SELECT b.id, s.name FROM book b JOIN shelf s ON s.id = b.shelf_id "
         f"WHERE b.id IN ({marks})",

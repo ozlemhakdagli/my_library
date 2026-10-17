@@ -3,7 +3,7 @@
 {% block content %}
 <h1 class="font-serif">{{ t("btn_add") }}</h1>
 
-<form class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/new">
+<form class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/new" enctype="multipart/form-data">
   <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_title") }}</span>
     <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
@@ -28,6 +28,12 @@
     <input type="checkbox" name="review_status" value="needs review" {% if values.review_status == "needs review" %}checked{% endif %}>
     <span>{{ t("needs_review") }}</span>
   </label>
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+    <span>{{ t("field_cover") }}</span>
+    <input type="file" name="cover" accept="image/*" aria-describedby="cover-help">
+  </label>
+  <p id="cover-help" class="text-sm text-muted">{{ t("cover_help") }}</p>
+  {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
   <button type="submit">{{ t("btn_add") }}</button>
 </form>
 {% endblock %}

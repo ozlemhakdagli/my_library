@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import urlencode, urlsplit
 
-from fastapi import FastAPI, Form, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -18,7 +18,8 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from library import db, migrate
 from library.backup import export_csv, make_backup
 from library.config import Settings
-from library.covers import book_cover_color
+from library import covers
+from library.covers import book_cover_color, save_cover
 from library.db import (
     READING_STATUSES,
     LoanError,
@@ -170,6 +171,29 @@ def _assignments(conn: sqlite3.Connection, book_id: int) -> dict:
     }
 
 
+def _card_cover(book: dict, shelf_name: str | None) -> None:
+    """Cover colour of a book: its own colour when it has one, else shelf or title colour."""
+    book["cover"] = book.get("cover_color") or book_cover_color(book["title"], shelf_name)
+
+
+def _cover_upload_bytes(upload: UploadFile | None) -> bytes | None:
+    """Bytes of an uploaded cover, or None when no file was chosen (an empty file field)."""
+    if upload is None:
+        return None
+    # One byte past the limit is read so that an oversized upload is detected.
+    data = upload.file.read(covers.MAX_UPLOAD_BYTES + 1)
+    if not data and not upload.filename:
+        return None
+    return data
+
+
+def _check_cover(photo: bytes | None) -> None:
+    """Raise ValueError unless `photo` is a readable JPEG, PNG or WEBP image within the size limit."""
+    if photo is None:
+        raise ValueError("no cover file")
+    covers._open_cover(photo)
+
+
 # Quick status action -> reading status it sets.
 QUICK_STATUS_ACTIONS = {"read": "read", "reading": "reading", "abandon": "abandoned"}
 
@@ -241,7 +265,7 @@ def create_app(
             types = db.list_types(conn)
         for book in books:
             book.update(extras[book["id"]])
-            book["cover"] = book_cover_color(book["title"], book.get("shelf"))
+            _card_cover(book, book.get("shelf"))
 
         def t(key: str, **kwargs: object) -> str:
             return translate(active_lang, key, **kwargs)
@@ -331,7 +355,7 @@ def create_app(
     def book_add_form(request: Request, lang: str | None = None) -> HTMLResponse:
         empty = {field: "" for field, _ in EDITABLE_FIELDS}
         empty["review_status"] = "ok"
-        return render(request, "add.html", lang, values=empty)
+        return render(request, "add.html", lang, values=empty, cover_error=None)
 
     @app.post("/books/new", response_model=None)
     def book_add_submit(
@@ -343,6 +367,7 @@ def create_app(
         note: Annotated[str, Form()] = "",
         review_status: Annotated[str, Form()] = "ok",
         lang: str | None = None,
+        cover: Annotated[UploadFile | None, File()] = None,
     ) -> HTMLResponse | RedirectResponse:
         posted = {
             "title": title,
@@ -355,7 +380,23 @@ def create_app(
         try:
             data = BookInput(**posted)
         except ValidationError:
-            return render(request, "add.html", lang, status_code=422, values=posted)
+            return render(
+                request, "add.html", lang, status_code=422, values=posted, cover_error=None
+            )
+        photo = _cover_upload_bytes(cover)
+        if photo is not None:
+            try:
+                _check_cover(photo)
+            except ValueError:
+                # Checked before anything is stored: a bad file adds no book.
+                return render(
+                    request,
+                    "add.html",
+                    lang,
+                    status_code=400,
+                    values=posted,
+                    cover_error=translator(request, lang)("err_cover_type"),
+                )
         with _open_db(settings) as conn:
             book_id = db.add_book(
                 conn,
@@ -366,10 +407,18 @@ def create_app(
                 note=data.note,
                 review_status=data.review_status,
             )
+            if photo is not None:
+                file_name, color = save_cover(photo, book_id, settings.cover_dir)
+                db.set_book_cover(conn, book_id, file_name, color)
         return RedirectResponse(f"/books/{book_id}", status_code=303)
 
-    @app.get("/books/{book_id}", response_class=HTMLResponse)
-    def book_detail(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:
+    def _detail_response(
+        request: Request,
+        book_id: int,
+        lang: str | None,
+        status_code: int = 200,
+        cover_error: str | None = None,
+    ) -> HTMLResponse:
         with _open_db(settings) as conn:
             book = db.get_book(conn, book_id)
             if book is None:
@@ -379,19 +428,67 @@ def create_app(
             loans = db.list_loans(conn, book_id)
             assignments = _assignments(conn, book_id)
             shelf_name = db.book_card_extras(conn, [book_id]).get(book_id, {}).get("shelf")
-        # Same cover colour as the list card (shelf colour, else title hash).
-        book["cover"] = book_cover_color(book["title"], shelf_name)
+        # Same cover colour as the list card.
+        _card_cover(book, shelf_name)
         return render(
             request,
             "detail.html",
             lang,
+            status_code=status_code,
             book=book,
             book_id=book_id,
             history=history,
             photos=photos,
             loans=loans,
+            cover_error=cover_error,
             **assignments,
         )
+
+    @app.get("/books/{book_id}", response_class=HTMLResponse)
+    def book_detail(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:
+        return _detail_response(request, book_id, lang)
+
+    @app.post("/books/{book_id}/cover", response_model=None)
+    def book_cover_replace(
+        request: Request,
+        book_id: int,
+        cover: Annotated[UploadFile | None, File()] = None,
+        lang: str | None = None,
+    ) -> HTMLResponse | RedirectResponse:
+        """Replace the cover photo. The file is stored as <book_id>.jpg, so the old file is overwritten."""
+        error: str | None = None
+        with _open_db(settings) as conn:
+            if db.get_book(conn, book_id) is None:
+                raise HTTPException(status_code=404)
+            photo = _cover_upload_bytes(cover)
+            try:
+                _check_cover(photo)
+            except ValueError:
+                error = translator(request, lang)("err_cover_type")
+            else:
+                file_name, color = save_cover(photo, book_id, settings.cover_dir)
+                db.set_book_cover(conn, book_id, file_name, color)
+        if error is not None:
+            return _detail_response(request, book_id, lang, status_code=400, cover_error=error)
+        return RedirectResponse(f"/books/{book_id}", status_code=303)
+
+    @app.get("/covers/{book_id}")
+    def book_cover(book_id: str) -> FileResponse:
+        """Stored cover photo as JPEG. Only numeric ids are accepted; anything else is 404."""
+        if not (book_id.isascii() and book_id.isdigit()):
+            raise HTTPException(status_code=404)
+        with _open_db(settings) as conn:
+            book = db.get_book(conn, int(book_id))
+        if book is None or not book["cover_file"]:
+            raise HTTPException(status_code=404)
+        try:
+            path = Path(covers.cover_path(settings.cover_dir, book["cover_file"]))
+        except ValueError:
+            raise HTTPException(status_code=404)
+        if not path.is_file():
+            raise HTTPException(status_code=404)
+        # Same URL after a replacement, so the browser must revalidate instead of reusing its copy.
+        return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
 
     @app.post("/books/{book_id}/shelf", response_model=None)
     def book_set_shelf(

@@ -3,8 +3,17 @@
 {% block content %}
 {% set current = book.status or "unread" %}
 <div class="grid gap-6 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
-  <div class="mx-auto w-full max-w-60 md:mx-0">
+  <div class="mx-auto grid w-full max-w-60 gap-3 md:mx-0">
     {% include "_cover.html" %}
+    <form method="post" action="/books/{{ book.id }}/cover" enctype="multipart/form-data" class="grid gap-2">
+      <label class="grid gap-1 text-sm [&>span]:text-muted">
+        <span>{{ t("cover_change") }}</span>
+        <input type="file" name="cover" accept="image/*" aria-describedby="cover-change-help">
+      </label>
+      <p id="cover-change-help" class="text-sm text-muted">{{ t("cover_help") }}</p>
+      {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
+      <div><button type="submit">{{ t("cover_upload") }}</button></div>
+    </form>
   </div>
 
   <div class="grid min-w-0 content-start gap-6">
