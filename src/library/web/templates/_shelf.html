@@ -11,4 +11,5 @@
     </label>
     <button type="submit">{{ t("btn_save") }}</button>
   </form>
+  {% if error %}<p class="text-[var(--warn)]">{{ error }}</p>{% endif %}
 </div>

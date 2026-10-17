@@ -50,7 +50,7 @@ def test_set_reading_status_is_visible_and_recorded(conn, book_id):
 
 
 def test_set_reading_status_updates_existing_row(conn, book_id):
-    set_reading_status(conn, book_id, "reading")
+    set_reading_status(conn, book_id, "reading", started_on="2026-10-01")
     set_reading_status(conn, book_id, "read", finished_on="2026-10-10")
     assert get_book(conn, book_id)["status"] == "read"
     rows = conn.execute("SELECT COUNT(*) FROM reading_status WHERE book_id = ?", (book_id,)).fetchone()

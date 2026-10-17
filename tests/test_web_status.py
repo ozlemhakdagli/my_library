@@ -89,15 +89,15 @@ def test_start_reading_sets_started_today_when_empty(client, db_path, book_id):
     assert row["finished_on"] is None
 
 
-def test_start_reading_after_finish_is_rejected_by_date_order(client, db_path, book_id):
-    # Finished earlier than today, so today as the new started date is rejected.
+def test_start_reading_after_finish_starts_new_round(client, db_path, book_id):
+    # Restarting a finished book begins a new round: finished is cleared, started is today.
     _seed(db_path, book_id, status="read", finished_on="2026-09-30")
     response = _quick(client, book_id, "reading")
-    assert response.status_code == 400
+    assert response.status_code == 200
     row = _reading_row(db_path, book_id)
-    assert row["status"] == "read"
-    assert row["started_on"] is None
-    assert row["finished_on"] == "2026-09-30"
+    assert row["status"] == "reading"
+    assert row["started_on"] == "2026-10-17"
+    assert row["finished_on"] is None
 
 
 def test_abandon_keeps_dates(client, db_path, book_id):

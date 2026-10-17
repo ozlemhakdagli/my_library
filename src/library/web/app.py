@@ -361,20 +361,37 @@ def create_app(
         lang: str | None = None,
     ) -> HTMLResponse | RedirectResponse:
         """Set or clear the shelf. HTMX gets the shelf block only; otherwise the book page."""
+        is_htmx = "HX-Request" in request.headers
         raw = shelf_id.strip()
+        error: str | None = None
         if raw and not raw.isdigit():
-            raise HTTPException(status_code=400, detail=translator(request, lang)("err_invalid"))
+            error = translator(request, lang)("err_invalid")
         with _open_db(settings) as conn:
             if db.get_book(conn, book_id) is None:
                 raise HTTPException(status_code=404)
-            try:
-                db.set_book_shelf(conn, book_id, int(raw) if raw else None)
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            if error is None:
+                try:
+                    db.set_book_shelf(conn, book_id, int(raw) if raw else None)
+                except ValueError as exc:
+                    error = str(exc)
+            if error is not None and not is_htmx:
+                raise HTTPException(status_code=400, detail=error)
             assignments = _assignments(conn, book_id)
-        if "HX-Request" not in request.headers:
+        if not is_htmx:
             return RedirectResponse(f"/books/{book_id}", status_code=303)
-        return render(request, "_shelf.html", lang, book_id=book_id, **assignments)
+        response = render(
+            request,
+            "_shelf.html",
+            lang,
+            status_code=400 if error else 200,
+            book_id=book_id,
+            error=error,
+            **assignments,
+        )
+        if error is None:
+            # Refresh the whole book page so the history table shows the change.
+            response.headers["HX-Refresh"] = "true"
+        return response
 
     @app.post("/books/{book_id}/types", response_model=None)
     def book_set_types(
@@ -384,20 +401,37 @@ def create_app(
         lang: str | None = None,
     ) -> HTMLResponse | RedirectResponse:
         """Replace the type set with the posted ids. Empty values are ignored (the add picker's placeholder)."""
+        is_htmx = "HX-Request" in request.headers
         values = [value.strip() for value in (type_id or []) if value.strip()]
+        error: str | None = None
         if not all(value.isdigit() for value in values):
-            raise HTTPException(status_code=400, detail=translator(request, lang)("err_invalid"))
+            error = translator(request, lang)("err_invalid")
         with _open_db(settings) as conn:
             if db.get_book(conn, book_id) is None:
                 raise HTTPException(status_code=404)
-            try:
-                db.set_book_types(conn, book_id, [int(value) for value in values])
-            except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            if error is None:
+                try:
+                    db.set_book_types(conn, book_id, [int(value) for value in values])
+                except ValueError as exc:
+                    error = str(exc)
+            if error is not None and not is_htmx:
+                raise HTTPException(status_code=400, detail=error)
             assignments = _assignments(conn, book_id)
-        if "HX-Request" not in request.headers:
+        if not is_htmx:
             return RedirectResponse(f"/books/{book_id}", status_code=303)
-        return render(request, "_types.html", lang, book_id=book_id, **assignments)
+        response = render(
+            request,
+            "_types.html",
+            lang,
+            status_code=400 if error else 200,
+            book_id=book_id,
+            error=error,
+            **assignments,
+        )
+        if error is None:
+            # Refresh the whole book page so the history table shows the change.
+            response.headers["HX-Refresh"] = "true"
+        return response
 
     @app.get("/books/{book_id}/edit", response_class=HTMLResponse)
     def book_edit_form(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:
@@ -531,9 +565,13 @@ def create_app(
             "status": row["status"] if row is not None else None,
             "finished_on": row["finished_on"] if row is not None else None,
         }
-        return render(
+        response = render(
             request, "_status.html", lang, status_code=status_code, book=book, error=error
         )
+        if error is None and "HX-Request" in request.headers:
+            # Refresh the whole book page so the history table shows the change.
+            response.headers["HX-Refresh"] = "true"
+        return response
 
     @app.get("/reading", response_class=HTMLResponse)
     def reading_page(request: Request, lang: str | None = None) -> HTMLResponse:

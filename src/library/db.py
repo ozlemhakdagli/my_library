@@ -434,7 +434,10 @@ def _filter_sql(
             "WHERE ba.book_id = b.id AND a.deleted_at IS NULL AND a.norm_name LIKE ?))"
         )
         params += [pattern, pattern, pattern]
-    if status:
+    if status == "unread":
+        # A book without a reading_status row is unread (see reading_counts).
+        where.append("(rs.status IS NULL OR rs.status = 'unread')")
+    elif status:
         where.append("rs.status = ?")
         params.append(status)
     if loan is not None:
@@ -609,6 +612,11 @@ def set_reading_status(
                 finished_text if finished_text is not None else old_values["finished_on"]
             ),
         }
+        if status == "reading":
+            # Reading again starts a new round: the old finish date stays in history.
+            new_values["finished_on"] = None
+            if old_values["status"] != "reading" and started_text is None:
+                new_values["started_on"] = today.isoformat()
         if new_values["started_on"] and new_values["finished_on"]:
             started_day = _parse_reading_date(new_values["started_on"])
             finished_day = _parse_reading_date(new_values["finished_on"])
