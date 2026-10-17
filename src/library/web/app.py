@@ -1,4 +1,5 @@
 import math
+import sqlite3
 import tempfile
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -103,6 +104,49 @@ def _open_db(settings: Settings) -> Iterator:
         conn.close()
 
 
+def _shelf_param(value: str) -> tuple[int | None, bool]:
+    """Shelf filter from the query: (shelf id, no_shelf). Empty or invalid means no filter."""
+    if value == "none":
+        return None, True
+    if value.isdigit():
+        return int(value), False
+    return None, False
+
+
+def _type_params(values: list[str]) -> list[int]:
+    return [int(value) for value in values if value.isdigit()]
+
+
+def _card_extras(conn: sqlite3.Connection, book_ids: list[int]) -> dict[int, dict]:
+    """Shelf name, type names and finished date for the list cards.
+
+    Read here instead of in db.py, which only takes filter parameters for the list.
+    """
+    extras: dict[int, dict] = {
+        book_id: {"shelf": None, "types": [], "finished_on": None} for book_id in book_ids
+    }
+    if not book_ids:
+        return extras
+    marks = ", ".join("?" for _ in book_ids)
+    for row in conn.execute(
+        f"SELECT b.id, s.name FROM book b JOIN shelf s ON s.id = b.shelf_id "
+        f"WHERE b.id IN ({marks})",
+        book_ids,
+    ):
+        extras[row["id"]]["shelf"] = row["name"]
+    for row in conn.execute(
+        "SELECT bt.book_id, t.name FROM book_type bt JOIN type t ON t.id = bt.type_id "
+        f"WHERE t.deleted_at IS NULL AND bt.book_id IN ({marks}) ORDER BY t.norm_name, t.id",
+        book_ids,
+    ):
+        extras[row["book_id"]]["types"].append(row["name"])
+    for row in conn.execute(
+        f"SELECT book_id, finished_on FROM reading_status WHERE book_id IN ({marks})", book_ids
+    ):
+        extras[row["book_id"]]["finished_on"] = row["finished_on"]
+    return extras
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     if settings is None:
         settings = Settings.from_env()
@@ -120,6 +164,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request: Request,
         q: str = "",
         status: str = "",
+        shelf: str = "",
+        type_ids: Annotated[list[str] | None, Query(alias="type")] = None,
         loan: bool = False,
         publisher: str = "",
         author: str = "",
@@ -128,9 +174,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lang: str | None = None,
     ) -> HTMLResponse:
         active_lang = resolve_lang(lang, request.cookies.get("lang"), settings.default_lang)
+        shelf_id, no_shelf = _shelf_param(shelf.strip())
+        type_list = _type_params(type_ids or [])
         filters = {
             "q": q.strip(),
             "status": status if status in READING_STATUSES else "",
+            "shelf": "none" if no_shelf else (str(shelf_id) if shelf_id is not None else ""),
+            "type": [str(type_id) for type_id in type_list],
             "loan": loan,
             "publisher": publisher.strip(),
             "author": author.strip(),
@@ -139,6 +189,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         db_filters = {
             "query": filters["q"],
             "status": filters["status"] or None,
+            "shelf_id": shelf_id,
+            "no_shelf": no_shelf,
+            "type_ids": type_list or None,
             "loan": "out" if loan else None,
             "publisher": filters["publisher"] or None,
             "author": filters["author"] or None,
@@ -152,19 +205,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             books = db.list_books(
                 conn, **db_filters, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
             )
+            extras = _card_extras(conn, [book["id"] for book in books])
+            shelves = db.list_shelves(conn)
+            types = db.list_types(conn)
+        for book in books:
+            book.update(extras[book["id"]])
 
         def t(key: str, **kwargs: object) -> str:
             return translate(active_lang, key, **kwargs)
 
         def query_string(**extra: object) -> str:
-            params: dict[str, object] = {}
+            params: list[tuple[str, str]] = []
             for key, value in filters.items():
                 if value is True:
-                    params[key] = "1"
+                    params.append((key, "1"))
+                elif isinstance(value, list):
+                    params.extend((key, item) for item in value)
                 elif value:
-                    params[key] = value
-            params.update(extra)
-            return "/?" + urlencode(params)
+                    params.append((key, str(value)))
+            params.extend((key, str(value)) for key, value in extra.items())
+            return "/?" + urlencode(params) if params else "/"
 
         def page_url(target_page: int) -> str:
             return query_string(page=target_page) if target_page > 1 else query_string()
@@ -172,9 +232,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         def lang_url(target_lang: str) -> str:
             return query_string(lang=target_lang)
 
+        # HTMX filter and paging requests get only the results fragment.
+        is_htmx = "HX-Request" in request.headers
         response = templates.TemplateResponse(
             request,
-            "list.html",
+            "_results.html" if is_htmx else "list.html",
             {
                 "t": t,
                 "lang": active_lang,
@@ -185,10 +247,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "page": page,
                 "pages": pages,
                 "page_url": page_url,
+                "clear_url": query_string(),
                 "filters": filters,
                 "statuses": READING_STATUSES,
+                "shelves": shelves,
+                "types": types,
             },
         )
+        response.headers["Vary"] = "HX-Request"
         if lang in SUPPORTED_LANGS:
             response.set_cookie("lang", lang, samesite="lax")
         return response

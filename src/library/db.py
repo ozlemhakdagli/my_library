@@ -410,6 +410,9 @@ def _filter_sql(
     publisher: str | None,
     author: str | None,
     needs_review: bool,
+    shelf_id: int | None = None,
+    no_shelf: bool = False,
+    type_ids: Sequence[int] | None = None,
 ) -> tuple[str, str, list[object]]:
     from_sql = (
         "FROM book b "
@@ -449,6 +452,19 @@ def _filter_sql(
         params.append(norm(author))
     if needs_review:
         where.append("b.review_status = 'needs review'")
+    if no_shelf:
+        where.append("b.shelf_id IS NULL")
+    elif shelf_id is not None:
+        where.append("b.shelf_id = ?")
+        params.append(shelf_id)
+    if type_ids:
+        # Any of the given types (OR); combined with the other filters by AND.
+        marks = ", ".join("?" for _ in type_ids)
+        where.append(
+            "EXISTS (SELECT 1 FROM book_type bt WHERE bt.book_id = b.id "
+            f"AND bt.type_id IN ({marks}))"
+        )
+        params += [int(t) for t in type_ids]
     return from_sql, " AND ".join(where), params
 
 
@@ -461,6 +477,9 @@ def list_books(
     publisher: str | None = None,
     author: str | None = None,
     needs_review: bool = False,
+    shelf_id: int | None = None,
+    no_shelf: bool = False,
+    type_ids: Sequence[int] | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[dict]:
@@ -471,6 +490,9 @@ def list_books(
         publisher=publisher,
         author=author,
         needs_review=needs_review,
+        shelf_id=shelf_id,
+        no_shelf=no_shelf,
+        type_ids=type_ids,
     )
     rows = conn.execute(
         f"SELECT b.* {from_sql} WHERE {where} ORDER BY b.norm_title, b.id LIMIT ? OFFSET ?",
@@ -488,6 +510,9 @@ def count_books(
     publisher: str | None = None,
     author: str | None = None,
     needs_review: bool = False,
+    shelf_id: int | None = None,
+    no_shelf: bool = False,
+    type_ids: Sequence[int] | None = None,
 ) -> int:
     from_sql, where, params = _filter_sql(
         query=query,
@@ -496,6 +521,9 @@ def count_books(
         publisher=publisher,
         author=author,
         needs_review=needs_review,
+        shelf_id=shelf_id,
+        no_shelf=no_shelf,
+        type_ids=type_ids,
     )
     row = conn.execute(f"SELECT COUNT(*) AS n {from_sql} WHERE {where}", params).fetchone()
     return row["n"]

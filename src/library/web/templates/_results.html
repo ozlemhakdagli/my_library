@@ -1,0 +1,24 @@
+<div id="results" class="grid gap-4">
+  {% if books %}
+  <p class="count">{{ total }}</p>
+  <ul class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+    {% for book in books %}
+      {% include "_book_card.html" %}
+    {% endfor %}
+  </ul>
+
+  {% if pages > 1 %}
+  <nav class="flex items-center justify-center gap-4">
+    {% if page > 1 %}
+      <a href="{{ page_url(page - 1) }}" hx-get="{{ page_url(page - 1) }}" hx-target="#results" hx-swap="outerHTML" hx-push-url="true">{{ t("pager_prev") }}</a>
+    {% endif %}
+    <span>{{ page }} / {{ pages }}</span>
+    {% if page < pages %}
+      <a href="{{ page_url(page + 1) }}" hx-get="{{ page_url(page + 1) }}" hx-target="#results" hx-swap="outerHTML" hx-push-url="true">{{ t("pager_next") }}</a>
+    {% endif %}
+  </nav>
+  {% endif %}
+  {% else %}
+  <p class="empty">{{ t("msg_not_found") }}</p>
+  {% endif %}
+</div>

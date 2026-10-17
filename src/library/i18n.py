@@ -7,6 +7,16 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "nav_loans": "Loans",
         "nav_review": "Review",
         "nav_settings": "Settings",
+        # library page filters and cards
+        "filters_title": "Filters",
+        "field_shelf": "Shelf",
+        "field_types": "Types",
+        "filter_shelf_any": "Any shelf",
+        "filter_no_shelf": "No shelf",
+        "filter_type_help": "Shows books with any selected type.",
+        "filter_clear": "Clear filters",
+        "search_placeholder": "Title, author or publisher",
+        "book_no_shelf": "No shelf",
         # page titles
         "title_books": "Books",
         "title_loans": "Loans",
@@ -117,6 +127,16 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "nav_loans": "Ödünçler",
         "nav_review": "İnceleme",
         "nav_settings": "Ayarlar",
+        # kitaplık sayfası filtreleri ve kartları
+        "filters_title": "Filtreler",
+        "field_shelf": "Raf",
+        "field_types": "Türler",
+        "filter_shelf_any": "Herhangi bir raf",
+        "filter_no_shelf": "Rafsız",
+        "filter_type_help": "Seçilen türlerden herhangi birine sahip kitapları gösterir.",
+        "filter_clear": "Filtreleri temizle",
+        "search_placeholder": "Başlık, yazar veya yayıncı",
+        "book_no_shelf": "Rafsız",
         # page titles
         "title_books": "Kitaplar",
         "title_loans": "Ödünçler",

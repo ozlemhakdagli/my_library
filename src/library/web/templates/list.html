@@ -1,76 +1,82 @@
 {% extends "base.html" %}
 {% block title %}{{ t("title_books") }}{% endblock %}
 {% block content %}
-<h1>{{ t("title_books") }}</h1>
+<div class="grid gap-6 md:grid-cols-[14rem_minmax(0,1fr)]">
+  <aside class="min-w-0">
+    <form id="filters" method="get" action="/"
+          hx-get="/" hx-target="#results" hx-swap="outerHTML" hx-push-url="true"
+          hx-trigger="change, submit, input changed delay:300ms from:input[type=search], input changed delay:300ms from:input[type=text]"
+          class="grid gap-4 rounded-xl border border-[var(--line)] p-4">
+      <input type="hidden" name="lang" value="{{ lang }}">
+      <h2 class="text-base font-semibold">{{ t("filters_title") }}</h2>
 
-<form class="filters" method="get" action="/">
-  <input type="hidden" name="lang" value="{{ lang }}">
-  <label class="field search">
-    <span class="visually-hidden">{{ t("btn_search") }}</span>
-    <input type="search" name="q" value="{{ filters.q }}">
-  </label>
+      <label class="grid gap-1">
+        <span class="visually-hidden">{{ t("btn_search") }}</span>
+        <input type="search" name="q" value="{{ filters.q }}" placeholder="{{ t('search_placeholder') }}">
+      </label>
 
-  <label class="field">
-    <span>{{ t("field_status") }}</span>
-    <select name="status">
-      <option value="">{{ t("filter_all") }}</option>
-      {% for s in statuses %}
-        <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ t("status_" ~ s) }}</option>
-      {% endfor %}
-    </select>
-  </label>
+      <label class="grid gap-1">
+        <span>{{ t("field_shelf") }}</span>
+        <select name="shelf">
+          <option value="">{{ t("filter_shelf_any") }}</option>
+          <option value="none" {% if filters.shelf == "none" %}selected{% endif %}>{{ t("filter_no_shelf") }}</option>
+          {% for shelf in shelves %}
+            <option value="{{ shelf.id }}" {% if filters.shelf == (shelf.id|string) %}selected{% endif %}>{{ shelf.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
 
-  <label class="field">
-    <span>{{ t("field_publisher") }}</span>
-    <input type="text" name="publisher" value="{{ filters.publisher }}">
-  </label>
+      <fieldset class="grid gap-2">
+        <legend class="mb-1 text-sm">{{ t("field_types") }}</legend>
+        <p class="text-sm text-[var(--muted)]">{{ t("filter_type_help") }}</p>
+        {% for type in types %}
+          <label class="flex items-center gap-2">
+            <input type="checkbox" name="type" value="{{ type.id }}" {% if (type.id|string) in filters.type %}checked{% endif %}>
+            <span>{{ type.name }}</span>
+          </label>
+        {% endfor %}
+      </fieldset>
 
-  <label class="field">
-    <span>{{ t("field_authors") }}</span>
-    <input type="text" name="author" value="{{ filters.author }}">
-  </label>
+      <label class="grid gap-1">
+        <span>{{ t("field_status") }}</span>
+        <select name="status">
+          <option value="">{{ t("filter_all") }}</option>
+          {% for s in statuses %}
+            <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ t("status_" ~ s) }}</option>
+          {% endfor %}
+        </select>
+      </label>
 
-  <label class="check">
-    <input type="checkbox" name="loan" value="1" {% if filters.loan %}checked{% endif %}>
-    <span>{{ t("field_loan") }}</span>
-  </label>
+      <label class="grid gap-1">
+        <span>{{ t("field_publisher") }}</span>
+        <input type="text" name="publisher" value="{{ filters.publisher }}">
+      </label>
 
-  <label class="check">
-    <input type="checkbox" name="needs_review" value="1" {% if filters.needs_review %}checked{% endif %}>
-    <span>{{ t("needs_review") }}</span>
-  </label>
+      <label class="grid gap-1">
+        <span>{{ t("field_authors") }}</span>
+        <input type="text" name="author" value="{{ filters.author }}">
+      </label>
 
-  <button type="submit">{{ t("btn_search") }}</button>
-</form>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="loan" value="1" {% if filters.loan %}checked{% endif %}>
+        <span>{{ t("field_loan") }}</span>
+      </label>
 
-{% if books %}
-<p class="count">{{ total }}</p>
-<ul class="book-list">
-  {% for book in books %}
-  <li class="book">
-    <div class="book-title">{{ book.title }}</div>
-    {% if book.subtitle %}<div class="book-subtitle">{{ book.subtitle }}</div>{% endif %}
-    <div class="book-meta">
-      <span>{{ book.authors | join("; ") or t("unknown") }}</span>
-      <span>{{ book.publisher or t("unknown") }}</span>
-    </div>
-    <div class="badges">
-      {% if book.status %}<span class="badge">{{ t("status_" ~ book.status) }}</span>{% endif %}
-      {% if book.loan %}<span class="badge">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
-      {% if book.review_status == "needs review" %}<span class="badge warn">{{ t("needs_review") }}</span>{% endif %}
-    </div>
-  </li>
-  {% endfor %}
-</ul>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" name="needs_review" value="1" {% if filters.needs_review %}checked{% endif %}>
+        <span>{{ t("needs_review") }}</span>
+      </label>
 
-{% if pages > 1 %}
-<nav class="pager">
-  {% if page > 1 %}<a href="{{ page_url(page - 1) }}">{{ t("pager_prev") }}</a>{% endif %}
-  <span>{{ page }} / {{ pages }}</span>
-  {% if page < pages %}<a href="{{ page_url(page + 1) }}">{{ t("pager_next") }}</a>{% endif %}
-</nav>
-{% endif %}
-{% else %}
-<p class="empty">{{ t("msg_not_found") }}</p>
-{% endif %}
+      <div class="flex flex-wrap items-center gap-3">
+        <button type="submit">{{ t("btn_search") }}</button>
+        <a href="{{ clear_url }}">{{ t("filter_clear") }}</a>
+      </div>
+    </form>
+  </aside>
+
+  <section class="min-w-0">
+    <h1 class="text-2xl font-semibold">{{ t("title_books") }}</h1>
+    {% include "_results.html" %}
+  </section>
+</div>
 {% endblock %}
