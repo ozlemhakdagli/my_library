@@ -115,15 +115,18 @@ def test_invalid_action_is_400_and_changes_nothing(client, db_path, book_id):
     assert _reading_row(db_path, book_id) is None
 
 
-def test_fragment_shows_badge_in_selected_language(client, book_id):
+def test_fragment_has_no_status_badge_in_any_language(client, book_id):
+    # The status strip already shows the state, so the fragment carries no badge.
     en = client.post(
         f"/books/{book_id}/status/quick?lang=en", data={"action": "reading"}
     ).text
     tr = client.post(
         f"/books/{book_id}/status/quick?lang=tr", data={"action": "read"}
     ).text
-    assert "Reading" in en
-    assert "Okundu" in tr
+    assert "Reading" not in en
+    assert "Okundu" not in tr
+    assert "bg-surface px-2 py-0.5" not in en
+    assert "bg-surface px-2 py-0.5" not in tr
 
 
 def test_htmx_and_plain_requests_return_same_fragment(client, book_id):
@@ -175,8 +178,17 @@ def test_detail_form_future_date_is_400_and_unchanged(client, db_path, book_id):
     assert _reading_row(db_path, book_id) is None
 
 
-def test_detail_shows_quick_buttons_and_list_does_not(client, book_id):
+def test_detail_has_no_quick_buttons_and_list_does_not_either(client, book_id):
     detail = client.get(f"/books/{book_id}").text
     listing = client.get("/").text
-    assert f"/books/{book_id}/status/quick" in detail
+    assert "/status/quick" not in detail
+    for label in ("Mark as read", "Start reading", "Abandon"):
+        assert label not in detail
     assert "/status/quick" not in listing
+
+
+def test_quick_endpoint_still_works_without_ui(client, db_path, book_id):
+    # The endpoint stays for backward compatibility even though the UI no longer uses it.
+    response = _quick(client, book_id, "reading")
+    assert response.status_code == 200
+    assert _reading_row(db_path, book_id)["status"] == "reading"

@@ -104,9 +104,6 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "not_on_loan": "Not on loan",
         # book detail
         "btn_edit": "Edit",
-        "btn_mark_read": "Mark as read",
-        "btn_start_reading": "Start reading",
-        "btn_abandon": "Abandon",
         "field_started": "Started",
         "field_finished": "Finished",
         "history_title": "Change history",
@@ -289,9 +286,6 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "not_on_loan": "Ödünçte değil",
         # book detail
         "btn_edit": "Düzenle",
-        "btn_mark_read": "Okundu olarak işaretle",
-        "btn_start_reading": "Okumaya başla",
-        "btn_abandon": "Yarım bırak",
         "field_started": "Başlangıç",
         "field_finished": "Bitiş",
         "history_title": "Değişiklik geçmişi",

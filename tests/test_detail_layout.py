@@ -85,10 +85,13 @@ def test_finished_date_field_shown_only_when_read(db_path, ids):
     assert 'name="finished_on"' not in html
 
 
-def test_detail_keeps_status_endpoints(db_path, ids):
+def test_detail_status_control_posts_to_status_endpoint_only(db_path, ids):
     book_id = ids["Okunmamış Roman"]
     html = _client(db_path).get(f"/books/{book_id}").text
-    assert f"/books/{book_id}/status/quick" in html
+    assert f'action="/books/{book_id}/status"' in html
+    assert "/status/quick" not in html
+    # The status badge is gone; the segmented control already shows the state.
+    assert "rounded-full bg-surface px-2 py-0.5 text-xs text-ink" not in html
 
 
 def test_detail_edit_and_delete_buttons(db_path, ids):
