@@ -3,35 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{% endblock %} · Personal Library</title>
+  <title>{% block title %}{% endblock %} · {{ t("app_name") }}</title>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js" defer></script>
 </head>
 <body class="bg-bg text-ink">
-  <header class="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-    <nav class="flex flex-wrap gap-x-4 gap-y-2">
-      <a href="/">{{ t("nav_books") }}</a>
-      <a href="/reading">{{ t("nav_reading") }}</a>
-      <a href="/shelves">{{ t("nav_shelves") }}</a>
-      <a href="/types">{{ t("nav_types") }}</a>
-      <a href="/loans">{{ t("nav_loans") }}</a>
-      <a href="/review">{{ t("nav_review") }}</a>
-      <a href="/settings">{{ t("nav_settings") }}</a>
-    </nav>
-    <div class="flex flex-wrap items-center gap-2">
-      <form method="post" action="/settings/theme" class="flex gap-1" role="group" aria-label="{{ t('theme_label') }}">
-        {% for value in ["light", "dark", "system"] %}
-        <button type="submit" name="theme" value="{{ value }}" aria-pressed="{{ 'true' if theme_of(request) == value else 'false' }}"
-          class="border border-line bg-transparent px-2 py-0.5 text-sm text-ink aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-bg">{{ t("theme_" ~ value) }}</button>
-        {% endfor %}
-      </form>
-      {% for code in languages %}
-        {% if code == lang %}
-          <strong>{{ code | upper }}</strong>
-        {% else %}
-          <a href="{{ lang_url(code) }}">{{ code | upper }}</a>
-        {% endif %}
-      {% endfor %}
+  <header class="border-b border-line">
+    <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-4 pt-3 pb-2">
+      <a href="/" class="order-1 font-serif text-base font-semibold text-ink no-underline md:text-xl">{{ t("app_name") }}</a>
+
+      {% block topbar_search %}{% endblock %}
+
+      <div class="order-2 ml-auto flex items-center gap-3 md:order-3">
+        <form method="post" action="/settings/theme" class="flex gap-1" role="group" aria-label="{{ t('theme_label') }}">
+          {% for value in ["light", "dark", "system"] %}
+          <button type="submit" name="theme" value="{{ value }}" aria-pressed="{{ 'true' if theme_of(request) == value else 'false' }}"
+            class="rounded-full border border-line bg-transparent px-3 py-1 text-sm text-ink aria-pressed:border-accent aria-pressed:bg-accent aria-pressed:text-bg">{{ t("theme_" ~ value) }}</button>
+          {% endfor %}
+        </form>
+        <span class="flex items-center gap-1.5 text-sm">
+          {% for code in languages %}
+            {% if code == lang %}
+              <strong class="text-ink">{{ code | upper }}</strong>
+            {% else %}
+              <a href="{{ lang_url(code) }}" class="text-muted hover:text-ink">{{ code | upper }}</a>
+            {% endif %}
+          {% endfor %}
+        </span>
+      </div>
+
+      <nav class="order-4 flex w-full flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
+        <a href="/" class="text-muted hover:text-ink">{{ t("nav_books") }}</a>
+        <a href="/reading" class="text-muted hover:text-ink">{{ t("nav_reading") }}</a>
+        <a href="/shelves" class="text-muted hover:text-ink">{{ t("nav_shelves") }}</a>
+        <a href="/types" class="text-muted hover:text-ink">{{ t("nav_types") }}</a>
+        <a href="/loans" class="text-muted hover:text-ink">{{ t("nav_loans") }}</a>
+        <a href="/review" class="text-muted hover:text-ink">{{ t("nav_review") }}</a>
+        <a href="/settings" class="text-muted hover:text-ink">{{ t("nav_settings") }}</a>
+      </nav>
     </div>
   </header>
   <main class="mx-auto w-full max-w-6xl px-4 py-4">

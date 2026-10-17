@@ -1,6 +1,40 @@
+{% macro chip(label) -%}
+<span class="inline-flex max-w-full items-center rounded-full border border-line bg-surface px-3 py-0.5 text-xs text-ink">
+  <span class="truncate">{{ label }}</span>
+</span>
+{%- endmacro %}
 <div id="results" class="grid gap-4">
+  {% set ns = namespace(count=0) %}
+  {% if filters.q %}{% set ns.count = ns.count + 1 %}{% endif %}
+  {% if filters.shelf %}{% set ns.count = ns.count + 1 %}{% endif %}
+  {% if filters.status %}{% set ns.count = ns.count + 1 %}{% endif %}
+  {% set ns.count = ns.count + filters.type | length %}
+  {% if filters.publisher %}{% set ns.count = ns.count + 1 %}{% endif %}
+  {% if filters.author %}{% set ns.count = ns.count + 1 %}{% endif %}
+  {% if filters.loan %}{% set ns.count = ns.count + 1 %}{% endif %}
+  {% if filters.needs_review %}{% set ns.count = ns.count + 1 %}{% endif %}
+
+  <div class="grid gap-2">
+    <p class="font-serif text-lg text-muted">{{ t("results_count", count=total) }}</p>
+    {% if ns.count %}
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+      <span class="text-muted">{{ t("filters_active") }} · {{ t("filters_count", count=ns.count) }}</span>
+      {% if filters.q %}{{ chip(t("field_query") ~ ": " ~ filters.q) }}{% endif %}
+      {% if filters.shelf %}
+        {% set shelf_name %}{% if filters.shelf == "none" %}{{ t("filter_no_shelf") }}{% else %}{% for shelf in shelves if (shelf.id|string) == filters.shelf %}{{ shelf.name }}{% endfor %}{% endif %}{% endset %}
+        {{ chip(t("field_shelf") ~ ": " ~ shelf_name) }}
+      {% endif %}
+      {% if filters.status %}{{ chip(t("field_status") ~ ": " ~ t("status_" ~ filters.status)) }}{% endif %}
+      {% for type in types if (type.id|string) in filters.type %}{{ chip(t("field_types") ~ ": " ~ type.name) }}{% endfor %}
+      {% if filters.publisher %}{{ chip(t("field_publisher") ~ ": " ~ filters.publisher) }}{% endif %}
+      {% if filters.author %}{{ chip(t("field_authors") ~ ": " ~ filters.author) }}{% endif %}
+      {% if filters.loan %}{{ chip(t("field_loan")) }}{% endif %}
+      {% if filters.needs_review %}{{ chip(t("needs_review")) }}{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
   {% if books %}
-  <p class="text-sm text-muted">{{ total }}</p>
   <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 xl:grid-cols-5">
     {% for book in books %}
       {% include "_book_card.html" %}
@@ -8,17 +42,22 @@
   </ul>
 
   {% if pages > 1 %}
-  <nav class="flex items-center justify-center gap-4">
+  <nav class="flex items-center justify-center gap-3 text-sm">
     {% if page > 1 %}
-      <a href="{{ page_url(page - 1) }}" hx-get="{{ page_url(page - 1) }}" hx-target="#results" hx-swap="outerHTML" hx-push-url="true">{{ t("pager_prev") }}</a>
+      <a href="{{ page_url(page - 1) }}" hx-get="{{ page_url(page - 1) }}" hx-target="#results" hx-swap="outerHTML" hx-push-url="true"
+         class="rounded-full border border-accent px-4 py-1.5 text-accent hover:bg-accent hover:text-bg">{{ t("pager_prev") }}</a>
     {% endif %}
-    <span>{{ page }} / {{ pages }}</span>
+    <span class="px-2 text-muted">{{ page }} / {{ pages }}</span>
     {% if page < pages %}
-      <a href="{{ page_url(page + 1) }}" hx-get="{{ page_url(page + 1) }}" hx-target="#results" hx-swap="outerHTML" hx-push-url="true">{{ t("pager_next") }}</a>
+      <a href="{{ page_url(page + 1) }}" hx-get="{{ page_url(page + 1) }}" hx-target="#results" hx-swap="outerHTML" hx-push-url="true"
+         class="rounded-full border border-accent px-4 py-1.5 text-accent hover:bg-accent hover:text-bg">{{ t("pager_next") }}</a>
     {% endif %}
   </nav>
   {% endif %}
   {% else %}
-  <p class="text-muted">{{ t("msg_not_found") }}</p>
+  <div class="grid justify-items-start gap-1 rounded-xl border border-dashed border-line px-5 py-10">
+    <p class="font-serif text-lg">{{ t("empty_title") }}</p>
+    <p class="text-sm text-muted">{{ t("empty_hint") }}</p>
+  </div>
   {% endif %}
 </div>

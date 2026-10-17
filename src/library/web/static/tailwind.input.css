@@ -123,3 +123,12 @@
     @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg;
   }
 }
+
+/* Wide screens: the filter panel is always visible as a left column, so the
+   closed-state content slot of <details> is forced visible there. Phones keep
+   the native open/close behaviour. */
+@media (min-width: 64rem) {
+  .filter-panel::details-content {
+    content-visibility: visible;
+  }
+}
