@@ -282,3 +282,58 @@ def test_new_labels_in_both_languages(paths):
     tr = _client(paths, "tr").get("/books/new").text
     assert "Cover photo" in en
     assert "Kapak fotoğrafı" in tr
+
+
+# --- real cover photo: no text drawn over it -----------------------------
+
+
+def test_card_with_cover_photo_shows_no_overlaid_text(paths, seeded):
+    client = _client(paths)
+    book_id = seeded["plain"]
+    client.post(f"/books/{book_id}/cover", files={"cover": ("c.jpg", JPEG, "image/jpeg")})
+    html = client.get("/").text
+    assert f'<img src="/covers/{book_id}"' in html
+    assert "object-cover object-center" in html
+    # Title and author are not printed on the photo; they stay in the alt text.
+    assert ">Plain Book</div>" not in html
+    assert ">Ali Veli</div>" not in html
+    assert 'alt="Plain Book, Ali Veli"' in html
+    # The spine line stays.
+    assert "bg-ink/30" in html
+
+
+def test_card_without_cover_photo_keeps_generated_text(paths, seeded):
+    html = _client(paths).get("/").text
+    assert ">Plain Book</div>" in html
+
+
+def test_detail_cover_photo_shows_no_overlaid_text(paths, seeded):
+    client = _client(paths)
+    book_id = seeded["plain"]
+    client.post(f"/books/{book_id}/cover", files={"cover": ("c.jpg", JPEG, "image/jpeg")})
+    html = client.get(f"/books/{book_id}").text
+    assert f'<img src="/covers/{book_id}"' in html
+    assert ">Plain Book</div>" not in html
+    assert 'alt="Plain Book, Ali Veli"' in html
+
+
+def test_cover_history_reads_as_added_then_changed(paths, seeded):
+    client = _client(paths, "tr")
+    book_id = seeded["plain"]
+    client.post(f"/books/{book_id}/cover", files={"cover": ("a.jpg", JPEG, "image/jpeg")})
+    html = client.get(f"/books/{book_id}").text
+    assert "Kapak fotoğrafı eklendi" in html
+    assert "Kapak: Kapak fotoğrafı eklendi" not in html
+    client.post(f"/books/{book_id}/cover", files={"cover": ("b.jpg", JPEG, "image/jpeg")})
+    html = client.get(f"/books/{book_id}").text
+    assert "Kapak fotoğrafı değiştirildi" in html
+    assert f"{book_id}.jpg → {book_id}.jpg" not in html
+
+
+def test_cover_history_in_english(paths, seeded):
+    client = _client(paths, "en")
+    book_id = seeded["plain"]
+    client.post(f"/books/{book_id}/cover", files={"cover": ("a.jpg", JPEG, "image/jpeg")})
+    assert "Cover photo added" in client.get(f"/books/{book_id}").text
+    client.post(f"/books/{book_id}/cover", files={"cover": ("b.jpg", JPEG, "image/jpeg")})
+    assert "Cover photo changed" in client.get(f"/books/{book_id}").text

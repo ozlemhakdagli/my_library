@@ -1,6 +1,7 @@
 {#
   Book cover tile, used by the list cards and the book page.
   Needs `book` (title, authors, publisher, cover, status, finished_on) and `t`.
+  A real cover photo (book.cover_file) is shown alone: no generated text on it.
   The colour comes from book.cover (set by the route). The cover text colour is
   the fixed --cover-ink token from tailwind.input.css, on purpose: covers keep
   their palette in both themes, so their text stays light in both.
@@ -9,10 +10,9 @@
      class="relative aspect-[2/3] w-full overflow-hidden rounded-r-lg bg-(--cover) text-(--cover-ink) shadow-md transition-transform group-hover:-translate-y-0.5"
      style="--cover: {{ book.cover }}">
   {% if book.cover_file %}
-  {# The photo sits under the spine, ribbon and text, which are positioned after it. #}
+  {# The photo sits under the spine and ribbon, which are positioned after it. No text is drawn over it; title and author stay in the alt text. #}
   <img src="/covers/{{ book.id }}" alt="{{ book.title }}, {{ book.authors | join('; ') or t('unknown') }}"
-       loading="lazy" class="absolute inset-0 h-full w-full object-cover">
-  <span aria-hidden="true" class="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-black/60 to-transparent"></span>
+       loading="lazy" class="absolute inset-0 h-full w-full object-cover object-center">
   {% endif %}
   <span aria-hidden="true" class="absolute inset-y-0 left-0 w-2 bg-ink/30"></span>
   {% if book.status in ["read", "reading", "abandoned"] %}
@@ -21,6 +21,7 @@
       {% if book.status == "read" %}{{ t("ribbon_read") }}{% if book.finished_on %} · {{ book.finished_on }}{% endif %}{% elif book.status == "reading" %}{{ t("ribbon_reading") }}{% else %}{{ t("ribbon_abandoned") }}{% endif %}
     </span>
   {% endif %}
+  {% if not book.cover_file %}
   <div class="relative flex h-full flex-col justify-between p-4 pl-5">
     <div class="pt-6">
       <div class="line-clamp-4 font-serif text-lg leading-tight font-semibold">{{ book.title }}</div>
@@ -28,4 +29,5 @@
     </div>
     <div class="truncate text-[11px] opacity-80">{{ book.publisher or t("unknown") }}</div>
   </div>
+  {% endif %}
 </div>

@@ -97,7 +97,11 @@
         {% for entry in history %}
         <li class="grid gap-0.5 py-3 text-sm [overflow-wrap:anywhere]">
           <span class="text-muted">{{ entry.changed_at }}</span>
+          {% if entry.field == "cover" %}
+          <span>{{ t("cover_changed") if entry.old_value else t("cover_added") }}</span>
+          {% else %}
           <span>{{ t("hf_" ~ entry.field) }}: {{ entry.old_value or "" }} → {{ entry.new_value or "" }}</span>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
