@@ -9,10 +9,19 @@
     </div>
     {% endif %}
   </a>
-  {% include "_status.html" %}
+  {% if book.status == "read" %}
+    {% set status_text = t("status_read") ~ (" · " ~ book.finished_on if book.finished_on else "") %}
+  {% elif book.status %}
+    {% set status_text = t("status_" ~ book.status) %}
+  {% else %}
+    {% set status_text = t("status_unread") %}
+  {% endif %}
+  <span data-status-label class="block min-w-0 truncate text-xs text-muted">{{ status_text }}</span>
+  {% if book.shelf or book.loan or book.review_status == "needs review" %}
   <div class="flex flex-wrap gap-2 text-xs text-muted">
-    <span class="inline-block rounded-full bg-surface px-2 py-0.5">{{ t("field_shelf") }}: {{ book.shelf or t("book_no_shelf") }}</span>
+    {% if book.shelf %}<span class="min-w-0 truncate">{{ book.shelf }}</span>{% endif %}
     {% if book.loan %}<span class="inline-block rounded-full bg-surface px-2 py-0.5">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
     {% if book.review_status == "needs review" %}<span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-warn">{{ t("needs_review") }}</span>{% endif %}
   </div>
+  {% endif %}
 </li>

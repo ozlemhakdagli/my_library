@@ -175,8 +175,8 @@ def test_detail_form_future_date_is_400_and_unchanged(client, db_path, book_id):
     assert _reading_row(db_path, book_id) is None
 
 
-def test_list_and_detail_pages_show_quick_buttons(client, book_id):
+def test_detail_shows_quick_buttons_and_list_does_not(client, book_id):
     detail = client.get(f"/books/{book_id}").text
     listing = client.get("/").text
     assert f"/books/{book_id}/status/quick" in detail
-    assert f"/books/{book_id}/status/quick" in listing
+    assert "/status/quick" not in listing
