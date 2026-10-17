@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ t("title_books") }}{% endblock %}
+{% block content %}
+<h1>{{ t("title_books") }}</h1>
+
+<form class="filters" method="get" action="/">
+  <input type="hidden" name="lang" value="{{ lang }}">
+  <label class="field search">
+    <span class="visually-hidden">{{ t("btn_search") }}</span>
+    <input type="search" name="q" value="{{ filters.q }}">
+  </label>
+
+  <label class="field">
+    <span>{{ t("field_status") }}</span>
+    <select name="status">
+      <option value="">—</option>
+      {% for s in statuses %}
+        <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ t("status_" ~ s) }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label class="field">
+    <span>{{ t("field_publisher") }}</span>
+    <input type="text" name="publisher" value="{{ filters.publisher }}">
+  </label>
+
+  <label class="field">
+    <span>{{ t("field_authors") }}</span>
+    <input type="text" name="author" value="{{ filters.author }}">
+  </label>
+
+  <label class="check">
+    <input type="checkbox" name="loan" value="1" {% if filters.loan %}checked{% endif %}>
+    <span>{{ t("field_loan") }}</span>
+  </label>
+
+  <label class="check">
+    <input type="checkbox" name="needs_review" value="1" {% if filters.needs_review %}checked{% endif %}>
+    <span>{{ t("needs_review") }}</span>
+  </label>
+
+  <button type="submit">{{ t("btn_search") }}</button>
+</form>
+
+{% if books %}
+<p class="count">{{ total }}</p>
+<ul class="book-list">
+  {% for book in books %}
+  <li class="book">
+    <div class="book-title">{{ book.title }}</div>
+    {% if book.subtitle %}<div class="book-subtitle">{{ book.subtitle }}</div>{% endif %}
+    <div class="book-meta">
+      <span>{{ book.authors | join("; ") or t("unknown") }}</span>
+      <span>{{ book.publisher or t("unknown") }}</span>
+    </div>
+    <div class="badges">
+      {% if book.status %}<span class="badge">{{ t("status_" ~ book.status) }}</span>{% endif %}
+      {% if book.loan %}<span class="badge">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
+      {% if book.review_status == "needs review" %}<span class="badge warn">{{ t("needs_review") }}</span>{% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+
+{% if pages > 1 %}
+<nav class="pager">
+  {% if page > 1 %}<a href="{{ page_url(page - 1) }}">&larr;</a>{% endif %}
+  <span>{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a href="{{ page_url(page + 1) }}">&rarr;</a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<p class="empty">{{ t("msg_not_found") }}</p>
+{% endif %}
+{% endblock %}
