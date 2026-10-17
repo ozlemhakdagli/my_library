@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ t("btn_add") }}{% endblock %}
+{% block content %}
+<h1>{{ t("btn_add") }}</h1>
+
+<form class="panel" method="post" action="/books/new">
+  <label class="field">
+    <span>{{ t("field_title") }}</span>
+    <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
+  </label>
+  <label class="field">
+    <span>{{ t("field_subtitle") }}</span>
+    <input type="text" name="subtitle" value="{{ values.subtitle }}" maxlength="300">
+  </label>
+  <label class="field">
+    <span>{{ t("field_authors") }}</span>
+    <input type="text" name="authors" value="{{ values.authors }}" maxlength="1000">
+  </label>
+  <label class="field">
+    <span>{{ t("field_publisher") }}</span>
+    <input type="text" name="publisher" value="{{ values.publisher }}" maxlength="300">
+  </label>
+  <label class="field">
+    <span>{{ t("field_note") }}</span>
+    <textarea name="note" rows="4" maxlength="5000">{{ values.note }}</textarea>
+  </label>
+  <label class="check">
+    <input type="checkbox" name="review_status" value="needs review" {% if values.review_status == "needs review" %}checked{% endif %}>
+    <span>{{ t("needs_review") }}</span>
+  </label>
+  <button type="submit">{{ t("btn_add") }}</button>
+</form>
+{% endblock %}

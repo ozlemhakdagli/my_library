@@ -40,6 +40,10 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         # placeholders
         "unknown": "unknown",
         "needs_review": "Needs review",
+        "pager_prev": "Previous",
+        "pager_next": "Next",
+        "filter_all": "All",
+        "not_on_loan": "Not on loan",
     },
     "tr": {
         # navigation
@@ -80,6 +84,10 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         # placeholders
         "unknown": "bilinmiyor",
         "needs_review": "İnceleme gerekiyor",
+        "pager_prev": "Önceki",
+        "pager_next": "Sonraki",
+        "filter_all": "Tümü",
+        "not_on_loan": "Ödünçte değil",
     },
 }
 

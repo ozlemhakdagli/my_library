@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+<h1>{{ book.title }}</h1>
+
+{% if preview is not none %}
+<table class="changes">
+  <tbody>
+  {% for row in preview %}
+    <tr>
+      <th>{{ row.label }}</th>
+      <td class="old">{{ row.old }}</td>
+      <td class="new">{{ row.new }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<form class="panel" method="post" action="/books/{{ book.id }}/edit">
+  <input type="hidden" name="title" value="{{ values.title }}">
+  <input type="hidden" name="subtitle" value="{{ values.subtitle }}">
+  <input type="hidden" name="authors" value="{{ values.authors }}">
+  <input type="hidden" name="publisher" value="{{ values.publisher }}">
+  <input type="hidden" name="note" value="{{ values.note }}">
+  <input type="hidden" name="review_status" value="{{ values.review_status }}">
+  <input type="hidden" name="action" value="save">
+  <button type="submit">{{ t("btn_save") }}</button>
+</form>
+{% else %}
+<form class="panel" method="post" action="/books/{{ book.id }}/edit">
+  <label class="field">
+    <span>{{ t("field_title") }}</span>
+    <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
+  </label>
+  <label class="field">
+    <span>{{ t("field_subtitle") }}</span>
+    <input type="text" name="subtitle" value="{{ values.subtitle }}" maxlength="300">
+  </label>
+  <label class="field">
+    <span>{{ t("field_authors") }}</span>
+    <input type="text" name="authors" value="{{ values.authors }}" maxlength="1000">
+  </label>
+  <label class="field">
+    <span>{{ t("field_publisher") }}</span>
+    <input type="text" name="publisher" value="{{ values.publisher }}" maxlength="300">
+  </label>
+  <label class="field">
+    <span>{{ t("field_note") }}</span>
+    <textarea name="note" rows="4" maxlength="5000">{{ values.note }}</textarea>
+  </label>
+  <label class="check">
+    <input type="checkbox" name="review_status" value="needs review" {% if values.review_status == "needs review" %}checked{% endif %}>
+    <span>{{ t("needs_review") }}</span>
+  </label>
+  <input type="hidden" name="action" value="preview">
+  <button type="submit">{{ t("btn_save") }}</button>
+</form>
+{% endif %}
+{% endblock %}

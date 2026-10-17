@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+<h1>{{ book.title }}</h1>
+{% if book.subtitle %}<p class="book-subtitle">{{ book.subtitle }}</p>{% endif %}
+
+<dl class="facts">
+  <dt>{{ t("field_authors") }}</dt>
+  <dd>{{ book.authors | join("; ") or t("unknown") }}</dd>
+  <dt>{{ t("field_publisher") }}</dt>
+  <dd>{{ book.publisher or t("unknown") }}</dd>
+  {% if book.note %}
+  <dt>{{ t("field_note") }}</dt>
+  <dd>{{ book.note }}</dd>
+  {% endif %}
+  <dt>{{ t("field_status") }}</dt>
+  <dd>{{ t("status_" ~ (book.status or "unread")) }}</dd>
+  <dt>{{ t("field_loan") }}</dt>
+  <dd>{% if book.loan %}{{ book.loan.borrower }}{% else %}{{ t("not_on_loan") }}{% endif %}</dd>
+  {% if book.review_status == "needs review" %}
+  <dt>{{ t("needs_review") }}</dt>
+  <dd><span class="badge warn">{{ t("needs_review") }}</span></dd>
+  {% endif %}
+</dl>
+
+<p class="actions"><a href="/books/{{ book.id }}/edit?lang={{ lang }}">Edit</a></p>
+
+<form class="panel" method="post" action="/books/{{ book.id }}/status">
+  <label class="field">
+    <span>{{ t("field_status") }}</span>
+    <select name="status">
+      {% for s in statuses %}
+        <option value="{{ s }}" {% if s == (book.status or "unread") %}selected{% endif %}>{{ t("status_" ~ s) }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="field">
+    <span>Started</span>
+    <input type="text" name="started_on" placeholder="YYYY-MM-DD">
+  </label>
+  <label class="field">
+    <span>Finished</span>
+    <input type="text" name="finished_on" placeholder="YYYY-MM-DD">
+  </label>
+  <button type="submit">{{ t("btn_save") }}</button>
+</form>
+
+<form class="panel" method="post" action="/books/{{ book.id }}/delete">
+  <button type="submit" class="danger">{{ t("btn_delete") }}</button>
+</form>
+{% endblock %}

@@ -13,7 +13,7 @@
   <label class="field">
     <span>{{ t("field_status") }}</span>
     <select name="status">
-      <option value="">—</option>
+      <option value="">{{ t("filter_all") }}</option>
       {% for s in statuses %}
         <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ t("status_" ~ s) }}</option>
       {% endfor %}
@@ -65,9 +65,9 @@
 
 {% if pages > 1 %}
 <nav class="pager">
-  {% if page > 1 %}<a href="{{ page_url(page - 1) }}">&larr;</a>{% endif %}
+  {% if page > 1 %}<a href="{{ page_url(page - 1) }}">{{ t("pager_prev") }}</a>{% endif %}
   <span>{{ page }} / {{ pages }}</span>
-  {% if page < pages %}<a href="{{ page_url(page + 1) }}">&rarr;</a>{% endif %}
+  {% if page < pages %}<a href="{{ page_url(page + 1) }}">{{ t("pager_next") }}</a>{% endif %}
 </nav>
 {% endif %}
 {% else %}
