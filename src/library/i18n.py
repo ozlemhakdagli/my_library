@@ -17,6 +17,11 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "filter_clear": "Clear filters",
         "search_placeholder": "Title, author or publisher",
         "book_no_shelf": "No shelf",
+        "shelf_none": "No shelf",
+        "type_add": "+ Add type",
+        "btn_remove": "Remove",
+        "hf_shelf": "Shelf",
+        "hf_type": "Type",
         # page titles
         "title_books": "Books",
         "title_loans": "Loans",
@@ -143,6 +148,11 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "filter_clear": "Filtreleri temizle",
         "search_placeholder": "Başlık, yazar veya yayıncı",
         "book_no_shelf": "Rafsız",
+        "shelf_none": "Klasör yok",
+        "type_add": "+ Tür ekle",
+        "btn_remove": "Kaldır",
+        "hf_shelf": "Raf",
+        "hf_type": "Tür",
         # page titles
         "title_books": "Kitaplar",
         "title_loans": "Ödünçler",

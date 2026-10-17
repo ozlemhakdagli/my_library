@@ -147,6 +147,30 @@ def _card_extras(conn: sqlite3.Connection, book_ids: list[int]) -> dict[int, dic
     return extras
 
 
+def _assignments(conn: sqlite3.Connection, book_id: int) -> dict:
+    """Shelf id, type chips and picker choices of a book. Deleted shelves and types are left out."""
+    shelf_row = conn.execute(
+        "SELECT b.shelf_id FROM book b JOIN shelf s ON s.id = b.shelf_id AND s.deleted_at IS NULL "
+        "WHERE b.id = ?",
+        (book_id,),
+    ).fetchone()
+    chips = [
+        dict(row)
+        for row in conn.execute(
+            "SELECT t.id, t.name FROM book_type bt JOIN type t ON t.id = bt.type_id "
+            "WHERE bt.book_id = ? AND t.deleted_at IS NULL ORDER BY t.norm_name, t.id",
+            (book_id,),
+        )
+    ]
+    chip_ids = {chip["id"] for chip in chips}
+    return {
+        "shelf_id": shelf_row["shelf_id"] if shelf_row is not None else None,
+        "shelves": db.list_shelves(conn),
+        "chips": chips,
+        "addable": [row for row in db.list_types(conn) if row["id"] not in chip_ids],
+    }
+
+
 # Quick status action -> reading status it sets.
 QUICK_STATUS_ACTIONS = {"read": "read", "reading": "reading", "abandon": "abandoned"}
 
@@ -351,9 +375,64 @@ def create_app(
             history = db.get_history(conn, book_id)
             photos = db.list_photos(conn, book_id)
             loans = db.list_loans(conn, book_id)
+            assignments = _assignments(conn, book_id)
         return render(
-            request, "detail.html", lang, book=book, history=history, photos=photos, loans=loans
+            request,
+            "detail.html",
+            lang,
+            book=book,
+            book_id=book_id,
+            history=history,
+            photos=photos,
+            loans=loans,
+            **assignments,
         )
+
+    @app.post("/books/{book_id}/shelf", response_model=None)
+    def book_set_shelf(
+        request: Request,
+        book_id: int,
+        shelf_id: Annotated[str, Form()] = "",
+        lang: str | None = None,
+    ) -> HTMLResponse | RedirectResponse:
+        """Set or clear the shelf. HTMX gets the shelf block only; otherwise the book page."""
+        raw = shelf_id.strip()
+        if raw and not raw.isdigit():
+            raise HTTPException(status_code=400, detail=translator(request, lang)("err_invalid"))
+        with _open_db(settings) as conn:
+            if db.get_book(conn, book_id) is None:
+                raise HTTPException(status_code=404)
+            try:
+                db.set_book_shelf(conn, book_id, int(raw) if raw else None)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            assignments = _assignments(conn, book_id)
+        if "HX-Request" not in request.headers:
+            return RedirectResponse(f"/books/{book_id}", status_code=303)
+        return render(request, "_shelf.html", lang, book_id=book_id, **assignments)
+
+    @app.post("/books/{book_id}/types", response_model=None)
+    def book_set_types(
+        request: Request,
+        book_id: int,
+        type_id: Annotated[list[str] | None, Form()] = None,
+        lang: str | None = None,
+    ) -> HTMLResponse | RedirectResponse:
+        """Replace the type set with the posted ids. Empty values are ignored (the add picker's placeholder)."""
+        values = [value.strip() for value in (type_id or []) if value.strip()]
+        if not all(value.isdigit() for value in values):
+            raise HTTPException(status_code=400, detail=translator(request, lang)("err_invalid"))
+        with _open_db(settings) as conn:
+            if db.get_book(conn, book_id) is None:
+                raise HTTPException(status_code=404)
+            try:
+                db.set_book_types(conn, book_id, [int(value) for value in values])
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            assignments = _assignments(conn, book_id)
+        if "HX-Request" not in request.headers:
+            return RedirectResponse(f"/books/{book_id}", status_code=303)
+        return render(request, "_types.html", lang, book_id=book_id, **assignments)
 
     @app.get("/books/{book_id}/edit", response_class=HTMLResponse)
     def book_edit_form(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:

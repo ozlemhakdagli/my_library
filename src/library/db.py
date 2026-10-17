@@ -241,7 +241,8 @@ def _write_history(
 def _book_to_dict(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     book_id = row["id"]
     status = conn.execute(
-        "SELECT status FROM reading_status WHERE book_id = ?", (book_id,)
+        "SELECT status, started_on, finished_on FROM reading_status WHERE book_id = ?",
+        (book_id,),
     ).fetchone()
     loan = conn.execute(
         "SELECT borrower, lent_on, returned_on FROM loan "
@@ -257,6 +258,8 @@ def _book_to_dict(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
         "review_status": row["review_status"],
         "note": row["note"] or "",
         "status": status["status"] if status is not None else None,
+        "started_on": status["started_on"] if status is not None else None,
+        "finished_on": status["finished_on"] if status is not None else None,
         "loan": dict(loan) if loan is not None else None,
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],

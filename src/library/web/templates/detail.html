@@ -23,6 +23,9 @@
   {% endif %}
 </dl>
 
+{% include "_shelf.html" %}
+{% include "_types.html" %}
+
 <p class="actions"><a href="/books/{{ book.id }}/edit?lang={{ lang }}">{{ t("btn_edit") }}</a></p>
 
 <form class="panel" method="post" action="/books/{{ book.id }}/status">

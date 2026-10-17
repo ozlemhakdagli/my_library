@@ -1,0 +1,14 @@
+<div id="shelf-block" class="panel">
+  <form method="post" action="/books/{{ book_id }}/shelf" hx-post="/books/{{ book_id }}/shelf" hx-target="#shelf-block" hx-swap="outerHTML" class="flex flex-wrap items-end gap-2">
+    <label class="field">
+      <span>{{ t("field_shelf") }}</span>
+      <select name="shelf_id">
+        <option value="" {% if shelf_id is none %}selected{% endif %}>{{ t("shelf_none") }}</option>
+        {% for shelf in shelves %}
+        <option value="{{ shelf.id }}" {% if shelf.id == shelf_id %}selected{% endif %}>{{ shelf.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">{{ t("btn_save") }}</button>
+  </form>
+</div>
