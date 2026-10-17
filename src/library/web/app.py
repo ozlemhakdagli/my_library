@@ -18,8 +18,15 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from library import db
 from library.backup import export_csv, make_backup
 from library.config import Settings
-from library.db import READING_STATUSES, LoanError, ReadingDateError, ReviewError
+from library.db import (
+    READING_STATUSES,
+    LoanError,
+    NameTakenError,
+    ReadingDateError,
+    ReviewError,
+)
 from library.i18n import SUPPORTED_LANGS, resolve_lang, translate
+from library.norm import norm
 
 WEB_DIR = Path(__file__).parent
 PAGE_SIZE = 50
@@ -695,6 +702,114 @@ def create_app(
             except ReviewError:
                 raise HTTPException(status_code=409, detail=t("err_already_resolved")) from None
         return RedirectResponse("/review", status_code=303)
+
+    def _mount_manage(
+        path: str,
+        template: str,
+        list_fn: Callable[[sqlite3.Connection], list[dict]],
+        add_fn: Callable[[sqlite3.Connection, str], int],
+        rename_fn: Callable[[sqlite3.Connection, int, str], None],
+        delete_fn: Callable[[sqlite3.Connection, int], None],
+        taken_key: str,
+    ) -> None:
+        """List, create, rename and soft-delete routes for shelves or types."""
+
+        def page(
+            request: Request,
+            lang: str | None,
+            status_code: int = 200,
+            error: str | None = None,
+            form_name: str = "",
+        ) -> HTMLResponse:
+            with _open_db(settings) as conn:
+                items = list_fn(conn)
+            return render(
+                request,
+                template,
+                lang,
+                status_code=status_code,
+                items=items,
+                error=error,
+                form_name=form_name,
+            )
+
+        def after_write(lang: str | None) -> RedirectResponse:
+            target = f"{path}?lang={lang}" if lang in SUPPORTED_LANGS else path
+            return RedirectResponse(target, status_code=303)
+
+        @app.get(path, response_class=HTMLResponse)
+        def manage_list(request: Request, lang: str | None = None) -> HTMLResponse:
+            return page(request, lang)
+
+        @app.post(path, response_model=None)
+        def manage_add(
+            request: Request,
+            name: Annotated[str, Form()] = "",
+            lang: str | None = None,
+        ) -> HTMLResponse | RedirectResponse:
+            t = translator(request, lang)
+            cleaned = name.strip()
+            if not norm(cleaned):
+                return page(request, lang, 422, error=t("err_name_required"), form_name=name)
+            try:
+                with _open_db(settings) as conn:
+                    add_fn(conn, cleaned)
+            except NameTakenError:
+                return page(request, lang, 409, error=t(taken_key), form_name=cleaned)
+            return after_write(lang)
+
+        @app.post(path + "/{item_id}/rename", response_model=None)
+        def manage_rename(
+            request: Request,
+            item_id: int,
+            name: Annotated[str, Form()] = "",
+            lang: str | None = None,
+        ) -> HTMLResponse | RedirectResponse:
+            t = translator(request, lang)
+            cleaned = name.strip()
+            if not norm(cleaned):
+                return page(request, lang, 422, error=t("err_name_required"), form_name=name)
+            try:
+                with _open_db(settings) as conn:
+                    rename_fn(conn, item_id, cleaned)
+            except NameTakenError:
+                return page(request, lang, 409, error=t(taken_key), form_name=cleaned)
+            except ValueError:
+                raise HTTPException(status_code=404, detail=t("msg_not_found")) from None
+            return after_write(lang)
+
+        @app.post(path + "/{item_id}/delete", response_model=None)
+        def manage_delete(
+            request: Request,
+            item_id: int,
+            lang: str | None = None,
+        ) -> RedirectResponse:
+            t = translator(request, lang)
+            with _open_db(settings) as conn:
+                try:
+                    delete_fn(conn, item_id)
+                except ValueError:
+                    raise HTTPException(status_code=404, detail=t("msg_not_found")) from None
+            return after_write(lang)
+
+    _mount_manage(
+        "/shelves",
+        "shelves.html",
+        db.list_shelves,
+        db.add_shelf,
+        db.rename_shelf,
+        db.delete_shelf,
+        "err_shelf_name_taken",
+    )
+    _mount_manage(
+        "/types",
+        "types.html",
+        db.list_types,
+        db.add_type,
+        db.rename_type,
+        db.delete_type,
+        "err_type_name_taken",
+    )
 
     @app.get("/settings", response_class=HTMLResponse)
     def settings_page(request: Request, lang: str | None = None) -> HTMLResponse:

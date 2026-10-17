@@ -143,7 +143,7 @@ def test_card_shows_shelf_and_type_names(client):
 def test_turkish_filter_labels(client):
     text = client.get("/", params={"lang": "tr"}).text
     assert "Filtreler" in text
-    assert "Raf" in text
+    assert "Klasör" in text
 
 
 def test_mobile_container_has_side_padding_and_no_fixed_wide_widths():
