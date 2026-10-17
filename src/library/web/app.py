@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from library import db, migrate
 from library.backup import export_csv, make_backup
 from library.config import Settings
+from library.covers import book_cover_color
 from library.db import (
     READING_STATUSES,
     LoanError,
@@ -240,6 +241,7 @@ def create_app(
             types = db.list_types(conn)
         for book in books:
             book.update(extras[book["id"]])
+            book["cover"] = book_cover_color(book["title"], book.get("shelf"))
 
         def t(key: str, **kwargs: object) -> str:
             return translate(active_lang, key, **kwargs)

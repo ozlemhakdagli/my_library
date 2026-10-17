@@ -2,6 +2,11 @@
 
 @source "../templates";
 
+/* Book cover typography. Titles use the serif stack from the spec. */
+@theme inline {
+  --font-serif: ui-serif, Georgia, serif;
+}
+
 /* Colour tokens. Templates use semantic classes (bg-bg, text-ink, text-muted,
    border-line, bg-accent, bg-surface, ...) that resolve to these variables.
 
