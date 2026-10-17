@@ -4,6 +4,7 @@ DICTIONARIES: dict[str, dict[str, str]] = {
     "en": {
         # navigation
         "nav_books": "Books",
+        "add_book": "Add book",
         "nav_loans": "Loans",
         "nav_reading": "Reading",
         "title_reading": "Reading",
@@ -186,6 +187,7 @@ DICTIONARIES: dict[str, dict[str, str]] = {
     "tr": {
         # navigation
         "nav_books": "Kitaplar",
+        "add_book": "Kitap ekle",
         "nav_loans": "Ödünç",
         "nav_reading": "Okuma",
         "title_reading": "Okuma",

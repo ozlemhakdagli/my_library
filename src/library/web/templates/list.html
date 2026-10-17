@@ -96,7 +96,10 @@
   </details>
 
   <section class="min-w-0">
-    <h1 class="mb-3 font-serif text-[1.75rem] leading-tight font-semibold">{{ t("title_books") }}</h1>
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="font-serif text-[1.75rem] leading-tight font-semibold">{{ t("title_books") }}</h1>
+      <a href="/books/new" class="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-bg no-underline hover:opacity-90">+ {{ t("add_book") }}</a>
+    </div>
     {% include "_results.html" %}
   </section>
 </div>
