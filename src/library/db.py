@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS book_author (
 
 CREATE TABLE IF NOT EXISTS photo (
     id INTEGER PRIMARY KEY,
-    book_id INTEGER NOT NULL REFERENCES book(id),
+    book_id INTEGER REFERENCES book(id),
     file_name TEXT NOT NULL,
     kind TEXT NOT NULL,
     confidence REAL
@@ -75,8 +75,9 @@ CREATE TABLE IF NOT EXISTS history (
 
 CREATE TABLE IF NOT EXISTS review_item (
     id INTEGER PRIMARY KEY,
-    book_id INTEGER NOT NULL REFERENCES book(id),
-    reason TEXT NOT NULL
+    book_id INTEGER REFERENCES book(id),
+    reason TEXT NOT NULL,
+    photo_file TEXT
 );
 """
 
