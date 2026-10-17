@@ -6,6 +6,10 @@ a migration must keep producing the same result even after db.SCHEMA changes lat
 """
 
 import sqlite3
+from pathlib import Path
+
+from library import db
+from library.config import Settings
 
 _NEW_TABLES: tuple[tuple[str, str], ...] = (
     (
@@ -79,3 +83,15 @@ def upgrade(conn: sqlite3.Connection) -> list[str]:
         conn.execute("ROLLBACK")
         raise
     return changes
+
+
+if __name__ == "__main__":
+    settings = Settings.from_env()
+    if not Path(settings.db_path).exists():
+        raise SystemExit(f"database not found: {settings.db_path}")
+    conn = db.connect(settings.db_path)
+    try:
+        changes = upgrade(conn)
+    finally:
+        conn.close()
+    print("\n".join(changes) if changes else "no changes")

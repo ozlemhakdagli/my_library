@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from library import db
+from library import db, migrate
 from library.backup import export_csv, make_backup
 from library.config import Settings
 from library.db import (
@@ -98,6 +98,17 @@ templates = Jinja2Templates(
 )
 
 
+def _upgrade_existing_db(db_path: str) -> None:
+    """Bring an existing database file up to the current schema. A missing file is left alone."""
+    if not Path(db_path).exists():
+        return
+    conn = db.connect(db_path)
+    try:
+        migrate.upgrade(conn)
+    finally:
+        conn.close()
+
+
 @contextmanager
 def _open_db(settings: Settings) -> Iterator:
     # Opened inside the route handler, not in a dependency: FastAPI may run
@@ -145,6 +156,8 @@ def create_app(
 ) -> FastAPI:
     if settings is None:
         settings = Settings.from_env()
+
+    _upgrade_existing_db(settings.db_path)
 
     app = FastAPI(title="Personal Library")
     app.state.settings = settings
