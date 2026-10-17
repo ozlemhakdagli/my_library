@@ -731,3 +731,180 @@ def resolve_review_item(conn: sqlite3.Connection, item_id: int, action: str) -> 
         )
         if book_id is not None:
             _write_history(conn, book_id, [HistoryEntry("review_resolution", None, action)], ts)
+
+
+class NameTakenError(Exception):
+    """A non-deleted shelf or type already has this name (compared by norm_name)."""
+
+
+def _clean_name(name: str) -> tuple[str, str]:
+    """Stored form of a shelf or type name and its comparison key."""
+    text = _text(name)
+    if text is None or not norm(text):
+        raise ValueError("name is required")
+    return text, norm(text)
+
+
+def _live_named(conn: sqlite3.Connection, table: str, row_id: int) -> sqlite3.Row:
+    """Row of `shelf` or `type` that is not deleted. `table` is internal, never user input."""
+    row = conn.execute(
+        f"SELECT * FROM {table} WHERE id = ? AND deleted_at IS NULL", (row_id,)
+    ).fetchone()
+    if row is None:
+        raise ValueError(f"{table} {row_id} not found")
+    return row
+
+
+def _ensure_name_free(conn: sqlite3.Connection, table: str, key: str, own_id: int | None) -> None:
+    row = conn.execute(
+        f"SELECT id FROM {table} WHERE norm_name = ? AND deleted_at IS NULL AND id IS NOT ?",
+        (key, own_id),
+    ).fetchone()
+    if row is not None:
+        raise NameTakenError(key)
+
+
+def _name_of(conn: sqlite3.Connection, table: str, row_id: int | None) -> str | None:
+    """Name of a shelf or type, deleted or not, for history values."""
+    if row_id is None:
+        return None
+    row = conn.execute(f"SELECT name FROM {table} WHERE id = ?", (row_id,)).fetchone()
+    return row["name"] if row is not None else None
+
+
+def add_shelf(conn: sqlite3.Connection, name: str) -> int:
+    text, key = _clean_name(name)
+    ts = _now()
+    with conn:
+        _ensure_name_free(conn, "shelf", key, None)
+        cur = conn.execute(
+            "INSERT INTO shelf (name, norm_name, created_at) VALUES (?, ?, ?)", (text, key, ts)
+        )
+    return cur.lastrowid
+
+
+def rename_shelf(conn: sqlite3.Connection, shelf_id: int, name: str) -> None:
+    text, key = _clean_name(name)
+    with conn:
+        row = _live_named(conn, "shelf", shelf_id)
+        _ensure_name_free(conn, "shelf", key, shelf_id)
+        if text != row["name"]:
+            conn.execute(
+                "UPDATE shelf SET name = ?, norm_name = ? WHERE id = ?", (text, key, shelf_id)
+            )
+
+
+def delete_shelf(conn: sqlite3.Connection, shelf_id: int) -> None:
+    """Soft delete. Books keep their shelf_id; the shelf is hidden from lists and pickers."""
+    ts = _now()
+    with conn:
+        _live_named(conn, "shelf", shelf_id)
+        conn.execute("UPDATE shelf SET deleted_at = ? WHERE id = ?", (ts, shelf_id))
+
+
+def list_shelves(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute(
+        "SELECT s.id, s.name, COUNT(b.id) AS book_count "
+        "FROM shelf s LEFT JOIN book b ON b.shelf_id = s.id AND b.deleted_at IS NULL "
+        "WHERE s.deleted_at IS NULL GROUP BY s.id ORDER BY s.norm_name, s.id"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def add_type(conn: sqlite3.Connection, name: str) -> int:
+    text, key = _clean_name(name)
+    ts = _now()
+    with conn:
+        _ensure_name_free(conn, "type", key, None)
+        cur = conn.execute(
+            "INSERT INTO type (name, norm_name, created_at) VALUES (?, ?, ?)", (text, key, ts)
+        )
+    return cur.lastrowid
+
+
+def rename_type(conn: sqlite3.Connection, type_id: int, name: str) -> None:
+    text, key = _clean_name(name)
+    with conn:
+        row = _live_named(conn, "type", type_id)
+        _ensure_name_free(conn, "type", key, type_id)
+        if text != row["name"]:
+            conn.execute(
+                "UPDATE type SET name = ?, norm_name = ? WHERE id = ?", (text, key, type_id)
+            )
+
+
+def delete_type(conn: sqlite3.Connection, type_id: int) -> None:
+    """Soft delete. Existing book links stay; the type is hidden from lists and pickers."""
+    ts = _now()
+    with conn:
+        _live_named(conn, "type", type_id)
+        conn.execute("UPDATE type SET deleted_at = ? WHERE id = ?", (ts, type_id))
+
+
+def list_types(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute(
+        "SELECT t.id, t.name, COUNT(b.id) AS book_count "
+        "FROM type t "
+        "LEFT JOIN book_type bt ON bt.type_id = t.id "
+        "LEFT JOIN book b ON b.id = bt.book_id AND b.deleted_at IS NULL "
+        "WHERE t.deleted_at IS NULL GROUP BY t.id ORDER BY t.norm_name, t.id"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def set_book_shelf(conn: sqlite3.Connection, book_id: int, shelf_id: int | None) -> None:
+    """Set or clear (None) a book's shelf. Writes one 'shelf' history row on change only."""
+    ts = _now()
+    with conn:
+        book = _live_book(conn, book_id)
+        if book is None:
+            raise ValueError(f"book {book_id} not found")
+        new_name = None
+        if shelf_id is not None:
+            new_name = _live_named(conn, "shelf", shelf_id)["name"]
+        if book["shelf_id"] == shelf_id:
+            return
+        old_name = _name_of(conn, "shelf", book["shelf_id"])
+        conn.execute(
+            "UPDATE book SET shelf_id = ?, updated_at = ? WHERE id = ?", (shelf_id, ts, book_id)
+        )
+        _write_history(conn, book_id, [HistoryEntry("shelf", old_name, new_name)], ts)
+
+
+def set_book_types(conn: sqlite3.Connection, book_id: int, type_ids: list[int]) -> None:
+    """Replace a book's live types with `type_ids`. One 'type' history row per added or removed type.
+
+    Links to types that were soft-deleted earlier are left as they are.
+    Writes nothing when the set is unchanged.
+    """
+    wanted_ids = list(dict.fromkeys(int(t) for t in type_ids))
+    ts = _now()
+    with conn:
+        if _live_book(conn, book_id) is None:
+            raise ValueError(f"book {book_id} not found")
+        wanted = {tid: _live_named(conn, "type", tid)["name"] for tid in wanted_ids}
+        current = {
+            r["type_id"]: r["name"]
+            for r in conn.execute(
+                "SELECT bt.type_id, t.name FROM book_type bt JOIN type t ON t.id = bt.type_id "
+                "WHERE bt.book_id = ? AND t.deleted_at IS NULL",
+                (book_id,),
+            ).fetchall()
+        }
+        removed = [tid for tid in current if tid not in wanted]
+        added = [tid for tid in wanted if tid not in current]
+        if not removed and not added:
+            return
+        for tid in removed:
+            conn.execute(
+                "DELETE FROM book_type WHERE book_id = ? AND type_id = ?", (book_id, tid)
+            )
+        for tid in added:
+            conn.execute(
+                "INSERT INTO book_type (book_id, type_id) VALUES (?, ?)", (book_id, tid)
+            )
+        entries = [HistoryEntry("type", current[tid], None) for tid in removed] + [
+            HistoryEntry("type", None, wanted[tid]) for tid in added
+        ]
+        conn.execute("UPDATE book SET updated_at = ? WHERE id = ?", (ts, book_id))
+        _write_history(conn, book_id, entries, ts)
