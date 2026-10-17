@@ -1,18 +1,18 @@
 <div id="status-{{ book.id }}" class="flex flex-col gap-2">
   <div class="flex flex-wrap gap-2">
     {% if book.status == "read" %}
-      <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ t("status_read") }}{% if book.finished_on %} · {{ book.finished_on }}{% endif %}</span>
+      <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs text-ink">{{ t("status_read") }}{% if book.finished_on %} · {{ book.finished_on }}{% endif %}</span>
     {% elif book.status %}
-      <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ t("status_" ~ book.status) }}</span>
+      <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs text-ink">{{ t("status_" ~ book.status) }}</span>
     {% else %}
-      <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ t("status_unread") }}</span>
+      <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs text-ink">{{ t("status_unread") }}</span>
     {% endif %}
   </div>
-  {% if error %}<p class="text-warn">{{ error }}</p>{% endif %}
+  {% if error %}<p class="text-sm text-warn" role="alert">{{ error }}</p>{% endif %}
   <div class="flex flex-wrap gap-2">
     {% for action, label in [("read", t("btn_mark_read")), ("reading", t("btn_start_reading")), ("abandon", t("btn_abandon"))] %}
     <form method="post" action="/books/{{ book.id }}/status/quick" hx-post="/books/{{ book.id }}/status/quick" hx-target="#status-{{ book.id }}" hx-swap="outerHTML" class="inline">
-      <button type="submit" name="action" value="{{ action }}">{{ label }}</button>
+      <button type="submit" name="action" value="{{ action }}" class="border border-accent bg-transparent px-3 py-1 text-sm text-accent">{{ label }}</button>
     </form>
     {% endfor %}
   </div>

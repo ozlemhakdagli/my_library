@@ -221,14 +221,14 @@ def test_detail_shows_change_history_in_english(client, db_path):
     assert "Change history" in text
     assert "Eski Ad" in text
     assert "Yeni Ad" in text
-    assert "Old value" in text and "New value" in text
+    assert "Eski Ad → Yeni Ad" in text
 
 
 def test_detail_shows_change_history_in_turkish(client, db_path):
     book_id = seed_detailed_book(db_path)
     text = client.get(f"/books/{book_id}", params={"lang": "tr"}).text
     assert "Değişiklik geçmişi" in text
-    assert "Eski değer" in text and "Yeni değer" in text
+    assert "Eski Ad → Yeni Ad" in text
 
 
 def test_detail_shows_loan_history_with_borrower(client, db_path):

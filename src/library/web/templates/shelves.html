@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{{ t("title_shelves") }}{% endblock %}
 {% block content %}
-<h1>{{ t("title_shelves") }}</h1>
+<h1 class="font-serif">{{ t("title_shelves") }}</h1>
 
 {% if error %}
 <p class="rounded-md bg-surface p-3 text-accent" role="alert">{{ error }}</p>
 {% endif %}
 
-<section class="grid gap-3 rounded-xl border border-line p-4">
+<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
   <form method="post" action="/shelves?lang={{ lang }}">
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("manage_name") }}</span>

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ t("title_review") }}{% endblock %}
 {% block content %}
-<h1>{{ t("title_review") }}</h1>
+<h1 class="font-serif">{{ t("title_review") }}</h1>
 
 {% if items %}
-<section class="grid gap-3 rounded-xl border border-line p-4">
+<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
 <ul class="divide-y divide-line">
   {% for item in items %}
   <li class="py-3 [overflow-wrap:anywhere]" data-review-id="{{ item.id }}">
@@ -35,7 +35,7 @@
 </nav>
 {% endif %}
 {% else %}
-<section class="grid gap-3 rounded-xl border border-line p-4">
+<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
   <p class="text-muted">{{ t("review_empty") }}</p>
 </section>
 {% endif %}

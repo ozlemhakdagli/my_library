@@ -1,121 +1,114 @@
 {% extends "base.html" %}
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
-<h1>{{ book.title }}</h1>
-{% if book.subtitle %}<p class="text-sm text-muted">{{ book.subtitle }}</p>{% endif %}
+{% set current = book.status or "unread" %}
+<div class="grid gap-6 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+  <div class="mx-auto w-full max-w-60 md:mx-0">
+    {% include "_cover.html" %}
+  </div>
 
-<dl class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2">
-  <dt>{{ t("field_authors") }}</dt>
-  <dd>{{ book.authors | join("; ") or t("unknown") }}</dd>
-  <dt>{{ t("field_publisher") }}</dt>
-  <dd>{{ book.publisher or t("unknown") }}</dd>
-  {% if book.note %}
-  <dt>{{ t("field_note") }}</dt>
-  <dd>{{ book.note }}</dd>
-  {% endif %}
-  <dt>{{ t("field_status") }}</dt>
-  <dd>{% include "_status.html" %}</dd>
-  <dt>{{ t("field_loan") }}</dt>
-  <dd>{% if book.loan %}{{ book.loan.borrower }}{% else %}{{ t("not_on_loan") }}{% endif %}</dd>
-  {% if book.review_status == "needs review" %}
-  <dt>{{ t("needs_review") }}</dt>
-  <dd><span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">{{ t("needs_review") }}</span></dd>
-  {% endif %}
-</dl>
+  <div class="grid min-w-0 content-start gap-6">
+    <header class="grid gap-2">
+      <h1 class="font-serif">{{ book.title }}</h1>
+      {% if book.subtitle %}<p class="text-lg text-muted">{{ book.subtitle }}</p>{% endif %}
+      <p class="text-sm font-semibold uppercase tracking-wide">{{ book.authors | join("; ") or t("unknown") }}</p>
+      <dl class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
+        <dt class="text-muted">{{ t("field_publisher") }}</dt>
+        <dd>{{ book.publisher or t("unknown") }}</dd>
+        <dt class="text-muted">{{ t("field_loan") }}</dt>
+        <dd>{% if book.loan %}{{ book.loan.borrower }}{% else %}{{ t("not_on_loan") }}{% endif %}</dd>
+      </dl>
+      {% if book.review_status == "needs review" %}
+      <p><span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">{{ t("needs_review") }}</span></p>
+      {% endif %}
+      {% if book.note %}<p class="whitespace-pre-line pt-1">{{ book.note }}</p>{% endif %}
+    </header>
 
-{% include "_shelf.html" %}
-{% include "_types.html" %}
+    <section class="grid gap-3" aria-labelledby="reading-status-title">
+      <h2 id="reading-status-title" class="sr-only">{{ t("field_status") }}</h2>
+      <form method="post" action="/books/{{ book.id }}/status" role="group" aria-label="{{ t('status_group_label') }}"
+            class="flex w-full gap-1 rounded-full border border-line p-1">
+        {% for s in statuses %}
+        <button type="submit" name="status" value="{{ s }}" aria-pressed="{{ 'true' if current == s else 'false' }}"
+          class="flex-1 justify-center whitespace-nowrap rounded-full bg-transparent px-2 py-1 text-sm text-ink aria-pressed:bg-accent aria-pressed:text-bg">{{ t("status_" ~ s) }}</button>
+        {% endfor %}
+      </form>
 
-<p class="mt-2 flex flex-wrap items-center gap-3"><a href="/books/{{ book.id }}/edit?lang={{ lang }}">{{ t("btn_edit") }}</a></p>
+      {% if current in ["reading", "read"] %}
+      <form method="post" action="/books/{{ book.id }}/status" class="grid gap-3 sm:grid-cols-2">
+        <input type="hidden" name="status" value="{{ current }}">
+        <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+          <span>{{ t("field_started") }}</span>
+          <input type="text" name="started_on" value="{{ book.started_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
+        </label>
+        {% if current == "read" %}
+        <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+          <span>{{ t("field_finished") }}</span>
+          <input type="text" name="finished_on" value="{{ book.finished_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
+        </label>
+        {% endif %}
+        <p id="date-help" class="text-sm text-muted sm:col-span-2">{{ t("date_help") }}</p>
+        <div class="sm:col-span-2"><button type="submit">{{ t("btn_save_dates") }}</button></div>
+      </form>
+      {% endif %}
+      {% include "_status.html" %}
+    </section>
 
-<form class="grid gap-3 rounded-xl border border-line p-4" method="post" action="/books/{{ book.id }}/status">
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_status") }}</span>
-    <select name="status">
-      {% for s in statuses %}
-        <option value="{{ s }}" {% if s == (book.status or "unread") %}selected{% endif %}>{{ t("status_" ~ s) }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_started") }}</span>
-    <input type="text" name="started_on" placeholder="YYYY-MM-DD">
-  </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_finished") }}</span>
-    <input type="text" name="finished_on" placeholder="YYYY-MM-DD">
-  </label>
-  <button type="submit">{{ t("btn_save") }}</button>
-</form>
+    {% include "_shelf.html" %}
+    {% include "_types.html" %}
 
-<section class="grid gap-3 rounded-xl border border-line p-4">
-  <h2>{{ t("loan_history_title") }}</h2>
-  {% if loans %}
-  <table class="w-full border-collapse text-left text-sm [&_td]:py-1 [&_td]:pr-3 [&_td]:align-top [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold">
-    <thead>
-      <tr>
-        <th>{{ t("loan_borrower") }}</th>
-        <th>{{ t("loan_lent_on") }}</th>
-        <th>{{ t("loan_returned_on") }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for loan in loans %}
-      <tr>
-        <td>{{ loan.borrower }}</td>
-        <td>{{ loan.lent_on }}</td>
-        <td>{{ loan.returned_on or "" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="text-muted">{{ t("loan_empty") }}</p>
-  {% endif %}
-</section>
+    <div class="flex flex-wrap items-center gap-3">
+      <a href="/books/{{ book.id }}/edit?lang={{ lang }}"
+         class="inline-flex items-center rounded-md bg-accent px-4 py-2 text-bg no-underline">{{ t("btn_edit") }}</a>
+      <form method="post" action="/books/{{ book.id }}/delete" onsubmit='return confirm({{ t("book_delete_confirm")|tojson }});'>
+        <button type="submit" class="border border-danger bg-transparent text-danger">{{ t("btn_delete") }}</button>
+      </form>
+    </div>
 
-<section class="grid gap-3 rounded-xl border border-line p-4">
-  <h2>{{ t("history_title") }}</h2>
-  {% if history %}
-  <table class="w-full border-collapse text-left text-sm [&_td]:py-1 [&_td]:pr-3 [&_td]:align-top [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold">
-    <thead>
-      <tr>
-        <th>{{ t("hist_when") }}</th>
-        <th>{{ t("hist_field") }}</th>
-        <th>{{ t("hist_old") }}</th>
-        <th>{{ t("hist_new") }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for entry in history %}
-      <tr>
-        <td>{{ entry.changed_at }}</td>
-        <td>{{ t("hf_" ~ entry.field) }}</td>
-        <td>{{ entry.old_value or "" }}</td>
-        <td>{{ entry.new_value or "" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="text-muted">{{ t("history_empty") }}</p>
-  {% endif %}
-</section>
+    <section class="grid gap-2">
+      <h2 class="font-serif">{{ t("loan_history_title") }}</h2>
+      {% if loans %}
+      <ul class="divide-y divide-line">
+        {% for loan in loans %}
+        <li class="grid gap-0.5 py-3 text-sm [overflow-wrap:anywhere]">
+          <span class="font-semibold">{{ loan.borrower }}</span>
+          <span class="text-muted">{{ t("loan_lent_on") }}: {{ loan.lent_on }}{% if loan.returned_on %} · {{ t("loan_returned_on") }}: {{ loan.returned_on }}{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted">{{ t("loan_empty") }}</p>
+      {% endif %}
+    </section>
 
-<section class="grid gap-3 rounded-xl border border-line p-4">
-  <h2>{{ t("photos_title") }}</h2>
-  {% if photos %}
-  <ul class="list-disc pl-5 text-sm">
-    {% for photo in photos %}
-    <li>{{ photo.file_name }}</li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p class="text-muted">{{ t("photos_empty") }}</p>
-  {% endif %}
-</section>
+    <section class="grid gap-2">
+      <h2 class="font-serif">{{ t("history_title") }}</h2>
+      {% if history %}
+      <ul class="divide-y divide-line">
+        {% for entry in history %}
+        <li class="grid gap-0.5 py-3 text-sm [overflow-wrap:anywhere]">
+          <span class="text-muted">{{ entry.changed_at }}</span>
+          <span>{{ t("hf_" ~ entry.field) }}: {{ entry.old_value or "" }} → {{ entry.new_value or "" }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted">{{ t("history_empty") }}</p>
+      {% endif %}
+    </section>
 
-<form class="grid gap-3 rounded-xl border border-line p-4" method="post" action="/books/{{ book.id }}/delete">
-  <button type="submit" class="bg-danger text-bg">{{ t("btn_delete") }}</button>
-</form>
+    <section class="grid gap-2">
+      <h2 class="font-serif">{{ t("photos_title") }}</h2>
+      {% if photos %}
+      <ul class="divide-y divide-line">
+        {% for photo in photos %}
+        <li class="py-3 text-sm [overflow-wrap:anywhere]">{{ photo.file_name }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted">{{ t("photos_empty") }}</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
 {% endblock %}

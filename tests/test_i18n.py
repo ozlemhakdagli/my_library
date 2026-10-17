@@ -40,10 +40,10 @@ def test_needs_review_translates_per_language():
 
 
 def test_status_names_translate():
-    assert translate("tr", "status_unread") == "okunmadı"
-    assert translate("tr", "status_reading") == "okunuyor"
-    assert translate("tr", "status_read") == "okundu"
-    assert translate("tr", "status_abandoned") == "yarım bırakıldı"
+    assert translate("tr", "status_unread") == "Okunmadı"
+    assert translate("tr", "status_reading") == "Okuyorum"
+    assert translate("tr", "status_read") == "Okundu"
+    assert translate("tr", "status_abandoned") == "Bırakıldı"
 
 
 def test_missing_tr_key_falls_back_to_en(monkeypatch):

@@ -123,7 +123,7 @@ def test_fragment_shows_badge_in_selected_language(client, book_id):
         f"/books/{book_id}/status/quick?lang=tr", data={"action": "read"}
     ).text
     assert "Reading" in en
-    assert "okundu" in tr
+    assert "Okundu" in tr
 
 
 def test_htmx_and_plain_requests_return_same_fragment(client, book_id):

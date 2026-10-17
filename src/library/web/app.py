@@ -378,6 +378,9 @@ def create_app(
             photos = db.list_photos(conn, book_id)
             loans = db.list_loans(conn, book_id)
             assignments = _assignments(conn, book_id)
+            shelf_name = db.book_card_extras(conn, [book_id]).get(book_id, {}).get("shelf")
+        # Same cover colour as the list card (shelf colour, else title hash).
+        book["cover"] = book_cover_color(book["title"], shelf_name)
         return render(
             request,
             "detail.html",

@@ -1,23 +1,7 @@
 <li class="flex min-w-0 flex-col gap-2">
   <a href="/books/{{ book.id }}" aria-label="{{ book.title }}, {{ book.authors | join('; ') or t('unknown') }}"
      class="group flex min-w-0 flex-col gap-2 rounded-r-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg">
-    <div class="relative aspect-[2/3] w-full overflow-hidden rounded-r-lg bg-(--cover) text-[#faf6ee] shadow-md transition-transform group-hover:-translate-y-0.5"
-         style="--cover: {{ book.cover }}">
-      <span aria-hidden="true" class="absolute inset-y-0 left-0 w-2 bg-black/30"></span>
-      {% if book.status in ["read", "reading", "abandoned"] %}
-        <span class="absolute right-0 top-0 max-w-[85%] truncate rounded-bl-md px-2 py-1 text-xs font-semibold
-          {% if book.status == 'read' %}bg-accent text-bg{% elif book.status == 'reading' %}bg-surface text-ink{% else %}bg-muted text-bg{% endif %}">
-          {% if book.status == "read" %}{{ t("ribbon_read") }}{% if book.finished_on %} · {{ book.finished_on }}{% endif %}{% elif book.status == "reading" %}{{ t("ribbon_reading") }}{% else %}{{ t("ribbon_abandoned") }}{% endif %}
-        </span>
-      {% endif %}
-      <div class="flex h-full flex-col justify-between p-4 pl-5">
-        <div class="pt-6">
-          <div class="line-clamp-4 font-serif text-lg leading-tight font-semibold">{{ book.title }}</div>
-          <div class="mt-2 line-clamp-2 text-xs uppercase tracking-wide opacity-90">{{ book.authors | join("; ") or t("unknown") }}</div>
-        </div>
-        <div class="truncate text-[11px] opacity-80">{{ book.publisher or t("unknown") }}</div>
-      </div>
-    </div>
+    {% include "_cover.html" %}
     {% if book.types %}
     <div class="flex flex-wrap gap-1">
       {% for type_name in book.types[:2] %}<span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs text-muted">{{ type_name }}</span>{% endfor %}
@@ -26,9 +10,9 @@
     {% endif %}
   </a>
   {% include "_status.html" %}
-  <div class="flex flex-wrap gap-2">
-    <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ t("field_shelf") }}: {{ book.shelf or t("book_no_shelf") }}</span>
-    {% if book.loan %}<span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
-    {% if book.review_status == "needs review" %}<span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">{{ t("needs_review") }}</span>{% endif %}
+  <div class="flex flex-wrap gap-2 text-xs text-muted">
+    <span class="inline-block rounded-full bg-surface px-2 py-0.5">{{ t("field_shelf") }}: {{ book.shelf or t("book_no_shelf") }}</span>
+    {% if book.loan %}<span class="inline-block rounded-full bg-surface px-2 py-0.5">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
+    {% if book.review_status == "needs review" %}<span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-warn">{{ t("needs_review") }}</span>{% endif %}
   </div>
 </li>

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ t("btn_add") }}{% endblock %}
 {% block content %}
-<h1>{{ t("btn_add") }}</h1>
+<h1 class="font-serif">{{ t("btn_add") }}</h1>
 
-<form class="grid gap-3 rounded-xl border border-line p-4" method="post" action="/books/new">
+<form class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/new">
   <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_title") }}</span>
     <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>

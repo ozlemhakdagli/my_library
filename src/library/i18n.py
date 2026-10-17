@@ -68,10 +68,10 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "field_status": "Status",
         "field_loan": "Loan",
         # reading status names
-        "status_unread": "Unread",
+        "status_unread": "Not read",
         "status_reading": "Reading",
         "status_read": "Read",
-        "status_abandoned": "Abandoned",
+        "status_abandoned": "Dropped",
         # buttons
         "btn_save": "Save",
         "btn_delete": "Delete",
@@ -169,6 +169,11 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "settings_language_label": "Interface language",
         "lang_name_en": "English",
         "lang_name_tr": "Türkçe",
+        # book page and secondary pages
+        "status_group_label": "Reading status",
+        "btn_save_dates": "Save dates",
+        "date_help": "Format: YYYY-MM-DD, for example 2026-10-17.",
+        "book_delete_confirm": "Delete this book? This cannot be undone.",
     },
     "tr": {
         # navigation
@@ -237,10 +242,10 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "field_status": "Durum",
         "field_loan": "Ödünç",
         # reading status names
-        "status_unread": "okunmadı",
-        "status_reading": "okunuyor",
-        "status_read": "okundu",
-        "status_abandoned": "yarım bırakıldı",
+        "status_unread": "Okunmadı",
+        "status_reading": "Okuyorum",
+        "status_read": "Okundu",
+        "status_abandoned": "Bırakıldı",
         # buttons
         "btn_save": "Kaydet",
         "btn_delete": "Sil",
@@ -338,6 +343,11 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "settings_language_label": "Arayüz dili",
         "lang_name_en": "English",
         "lang_name_tr": "Türkçe",
+        # kitap sayfası ve ikincil sayfalar
+        "status_group_label": "Okuma durumu",
+        "btn_save_dates": "Tarihleri kaydet",
+        "date_help": "Biçim: YYYY-MM-DD, örneğin 2026-10-17.",
+        "book_delete_confirm": "Bu kitap silinsin mi? Bu işlem geri alınamaz.",
     },
 }
 

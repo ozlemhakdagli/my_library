@@ -23,6 +23,9 @@
   --danger: #9a2b1b;
   --warn: #8a5a00;
   --warn-bg: #fff3d6;
+  /* Text on book covers. Fixed on purpose: the cover palette (covers.py) is the
+     same in both themes, so the cover text must stay light in both as well. */
+  --cover-ink: #faf6ee;
   color-scheme: light;
 }
 
@@ -79,13 +82,20 @@
     color: var(--accent);
   }
 
+  /* Page titles and section titles use the serif stack (spec 6). */
+  h1,
+  h2 {
+    font-family: ui-serif, Georgia, serif;
+    line-height: 1.2;
+  }
+
   h1 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 600;
   }
 
   h2 {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     font-weight: 600;
   }
 
@@ -96,6 +106,7 @@
     min-width: 0;
     padding: 0.5rem 0.625rem;
     font: inherit;
+    min-height: 2.5rem;
     color: var(--ink);
     background: var(--surface);
     border: 1px solid var(--line);
