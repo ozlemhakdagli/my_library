@@ -5,6 +5,7 @@ services:
       - "8765:8765"
     volumes:
       - library-data:/data
+      - ${LIBRARY_RAW_DIR:-./data/raw}:/raw:ro
     restart: unless-stopped
 
 volumes:

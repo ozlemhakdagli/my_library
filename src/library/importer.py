@@ -238,3 +238,35 @@ def import_raw(
         raise
     conn.commit()
     return report
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI: python -m library.importer --raw <dir> --db <path>.
+
+    Prints the imported counts. Exits 1 and commits nothing if the counts
+    differ from EXPECTED_COUNTS.
+    """
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(prog="python -m library.importer")
+    parser.add_argument("--raw", required=True, help="directory with *.jsonl raw files")
+    parser.add_argument("--db", required=True, help="SQLite database path")
+    args = parser.parse_args(argv)
+
+    conn = db.connect(args.db)
+    try:
+        report = import_raw(conn, args.raw, EXPECTED_COUNTS)
+    except ImportCountMismatch as exc:
+        print(f"import aborted, nothing written: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        conn.close()
+    print(f"{report.main_books} books")
+    print(f"{report.review_items} review items")
+    print(f"{report.photos} photos")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
