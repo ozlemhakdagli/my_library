@@ -3,27 +3,27 @@
 {% block content %}
 <h1>{{ t("title_settings") }}</h1>
 
-<section class="panel">
+<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
   <h2>{{ t("settings_backup_title") }}</h2>
   <p>{{ t("settings_backup_help") }}</p>
   <form method="post" action="/settings/backup?lang={{ lang }}">
     <button type="submit">{{ t("btn_backup") }}</button>
   </form>
   {% if backup_path %}
-  <p class="msg" role="status">{{ t("settings_backup_done", path=backup_path) }}</p>
+  <p class="rounded-md bg-[var(--badge-bg)] p-3 text-[var(--accent)]" role="status">{{ t("settings_backup_done", path=backup_path) }}</p>
   {% endif %}
 </section>
 
-<section class="panel">
+<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
   <h2>{{ t("settings_export_title") }}</h2>
   <p>{{ t("settings_export_help") }}</p>
   <p><a href="/settings/export.csv?lang={{ lang }}" download>{{ t("btn_export") }}</a></p>
 </section>
 
-<section class="panel">
+<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
   <h2>{{ t("settings_language_title") }}</h2>
   <form method="post" action="/settings/language">
-    <label class="field">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
       <span>{{ t("settings_language_label") }}</span>
       <select name="lang">
         {% for code in languages %}

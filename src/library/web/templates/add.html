@@ -3,28 +3,28 @@
 {% block content %}
 <h1>{{ t("btn_add") }}</h1>
 
-<form class="panel" method="post" action="/books/new">
-  <label class="field">
+<form class="grid gap-3 rounded-xl border border-[var(--line)] p-4" method="post" action="/books/new">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
     <span>{{ t("field_title") }}</span>
     <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
   </label>
-  <label class="field">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
     <span>{{ t("field_subtitle") }}</span>
     <input type="text" name="subtitle" value="{{ values.subtitle }}" maxlength="300">
   </label>
-  <label class="field">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
     <span>{{ t("field_authors") }}</span>
     <input type="text" name="authors" value="{{ values.authors }}" maxlength="1000">
   </label>
-  <label class="field">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
     <span>{{ t("field_publisher") }}</span>
     <input type="text" name="publisher" value="{{ values.publisher }}" maxlength="300">
   </label>
-  <label class="field">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
     <span>{{ t("field_note") }}</span>
     <textarea name="note" rows="4" maxlength="5000">{{ values.note }}</textarea>
   </label>
-  <label class="check">
+  <label class="flex items-center gap-2">
     <input type="checkbox" name="review_status" value="needs review" {% if values.review_status == "needs review" %}checked{% endif %}>
     <span>{{ t("needs_review") }}</span>
   </label>

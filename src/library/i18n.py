@@ -5,6 +5,8 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         # navigation
         "nav_books": "Books",
         "nav_loans": "Loans",
+        "nav_reading": "Reading",
+        "title_reading": "Reading",
         "nav_review": "Review",
         "nav_settings": "Settings",
         "nav_shelves": "Shelves",
@@ -123,6 +125,12 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "err_finished_before_started": "The finish date cannot be before the start date.",
         # review queue
         "review_empty": "The review queue is empty.",
+        "reading_counts_title": "Books by status",
+        "reading_years_title": "Finished per year",
+        "reading_col_status": "Status",
+        "reading_col_books": "Books",
+        "reading_col_year": "Year",
+        "reading_years_empty": "No finished books yet.",
         "unreadable_title": "[unreadable]",
         "field_reason": "Reason",
         "field_photo": "Photo",
@@ -149,7 +157,9 @@ DICTIONARIES: dict[str, dict[str, str]] = {
     "tr": {
         # navigation
         "nav_books": "Kitaplar",
-        "nav_loans": "Ödünçler",
+        "nav_loans": "Ödünç",
+        "nav_reading": "Okuma",
+        "title_reading": "Okuma",
         "nav_review": "İnceleme",
         "nav_settings": "Ayarlar",
         "nav_shelves": "Klasörler",
@@ -268,6 +278,12 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "err_finished_before_started": "Bitiş tarihi başlangıç tarihinden önce olamaz.",
         # review queue
         "review_empty": "İnceleme kuyruğu boş.",
+        "reading_counts_title": "Duruma göre kitaplar",
+        "reading_years_title": "Yıllara göre bitirilen kitaplar",
+        "reading_col_status": "Durum",
+        "reading_col_books": "Kitap",
+        "reading_col_year": "Yıl",
+        "reading_years_empty": "Henüz bitirilen kitap yok.",
         "unreadable_title": "[okunamadı]",
         "field_reason": "Neden",
         "field_photo": "Fotoğraf",

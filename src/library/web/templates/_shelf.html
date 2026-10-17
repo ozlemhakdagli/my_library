@@ -1,6 +1,6 @@
-<div id="shelf-block" class="panel">
+<div id="shelf-block" class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
   <form method="post" action="/books/{{ book_id }}/shelf" hx-post="/books/{{ book_id }}/shelf" hx-target="#shelf-block" hx-swap="outerHTML" class="flex flex-wrap items-end gap-2">
-    <label class="field">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
       <span>{{ t("field_shelf") }}</span>
       <select name="shelf_id">
         <option value="" {% if shelf_id is none %}selected{% endif %}>{{ t("shelf_none") }}</option>

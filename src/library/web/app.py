@@ -124,56 +124,14 @@ def _type_params(values: list[str]) -> list[int]:
     return [int(value) for value in values if value.isdigit()]
 
 
-def _card_extras(conn: sqlite3.Connection, book_ids: list[int]) -> dict[int, dict]:
-    """Shelf name, type names and finished date for the list cards.
-
-    Read here instead of in db.py, which only takes filter parameters for the list.
-    """
-    extras: dict[int, dict] = {
-        book_id: {"shelf": None, "types": [], "finished_on": None} for book_id in book_ids
-    }
-    if not book_ids:
-        return extras
-    marks = ", ".join("?" for _ in book_ids)
-    for row in conn.execute(
-        f"SELECT b.id, s.name FROM book b JOIN shelf s ON s.id = b.shelf_id "
-        f"WHERE b.id IN ({marks})",
-        book_ids,
-    ):
-        extras[row["id"]]["shelf"] = row["name"]
-    for row in conn.execute(
-        "SELECT bt.book_id, t.name FROM book_type bt JOIN type t ON t.id = bt.type_id "
-        f"WHERE t.deleted_at IS NULL AND bt.book_id IN ({marks}) ORDER BY t.norm_name, t.id",
-        book_ids,
-    ):
-        extras[row["book_id"]]["types"].append(row["name"])
-    for row in conn.execute(
-        f"SELECT book_id, finished_on FROM reading_status WHERE book_id IN ({marks})", book_ids
-    ):
-        extras[row["book_id"]]["finished_on"] = row["finished_on"]
-    return extras
-
-
 def _assignments(conn: sqlite3.Connection, book_id: int) -> dict:
-    """Shelf id, type chips and picker choices of a book. Deleted shelves and types are left out."""
-    shelf_row = conn.execute(
-        "SELECT b.shelf_id FROM book b JOIN shelf s ON s.id = b.shelf_id AND s.deleted_at IS NULL "
-        "WHERE b.id = ?",
-        (book_id,),
-    ).fetchone()
-    chips = [
-        dict(row)
-        for row in conn.execute(
-            "SELECT t.id, t.name FROM book_type bt JOIN type t ON t.id = bt.type_id "
-            "WHERE bt.book_id = ? AND t.deleted_at IS NULL ORDER BY t.norm_name, t.id",
-            (book_id,),
-        )
-    ]
-    chip_ids = {chip["id"] for chip in chips}
+    """Shelf id, type chips and picker choices of a book."""
+    found = db.get_book_shelf_and_types(conn, book_id)
+    chip_ids = {chip["id"] for chip in found["chips"]}
     return {
-        "shelf_id": shelf_row["shelf_id"] if shelf_row is not None else None,
+        "shelf_id": found["shelf_id"],
         "shelves": db.list_shelves(conn),
-        "chips": chips,
+        "chips": found["chips"],
         "addable": [row for row in db.list_types(conn) if row["id"] not in chip_ids],
     }
 
@@ -242,7 +200,7 @@ def create_app(
             books = db.list_books(
                 conn, **db_filters, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
             )
-            extras = _card_extras(conn, [book["id"] for book in books])
+            extras = db.book_card_extras(conn, [book["id"] for book in books])
             shelves = db.list_shelves(conn)
             types = db.list_types(conn)
         for book in books:
@@ -549,10 +507,7 @@ def create_app(
                 error, status_code = t("err_invalid"), 400
             else:
                 today = today_fn()
-                current = conn.execute(
-                    "SELECT started_on, finished_on FROM reading_status WHERE book_id = ?",
-                    (book_id,),
-                ).fetchone()
+                current = db.get_reading_status(conn, book_id)
                 # Today fills an empty date only; a stored date is kept by passing None.
                 started_on = finished_on = None
                 if action == "reading" and (current is None or not current["started_on"]):
@@ -570,9 +525,7 @@ def create_app(
                     )
                 except ReadingDateError as exc:
                     error, status_code = t(exc.code), 400
-            row = conn.execute(
-                "SELECT status, finished_on FROM reading_status WHERE book_id = ?", (book_id,)
-            ).fetchone()
+            row = db.get_reading_status(conn, book_id)
         book = {
             "id": book_id,
             "status": row["status"] if row is not None else None,
@@ -581,6 +534,13 @@ def create_app(
         return render(
             request, "_status.html", lang, status_code=status_code, book=book, error=error
         )
+
+    @app.get("/reading", response_class=HTMLResponse)
+    def reading_page(request: Request, lang: str | None = None) -> HTMLResponse:
+        with _open_db(settings) as conn:
+            counts = db.reading_counts(conn)
+            years = db.finished_per_year(conn)
+        return render(request, "reading.html", lang, counts=counts, years=years)
 
     def loans_view(
         request: Request, lang: str | None, error: str | None = None, status_code: int = 200

@@ -94,8 +94,8 @@ def test_setting_types_replaces_the_set(client, seeded):
     client.post(f"/books/{ids['alpha']}/types", data={"type_id": [str(ids["dijital"])]})
     assert db_types(path, ids["alpha"]) == {ids["dijital"]}
     page = client.get(f"/books/{ids['alpha']}").text
-    assert 'class="chip">Dijital' in page
-    assert 'class="chip">Kağıt' not in page
+    assert '>Dijital<button' in page
+    assert '>Kağıt<button' not in page
 
     client.post(
         f"/books/{ids['alpha']}/types",
@@ -135,7 +135,7 @@ def test_history_lists_shelf_and_type_changes(client, seeded):
 def test_book_without_types_shows_only_the_add_picker(client, seeded):
     _, ids = seeded
     page = client.get(f"/books/{ids['bravo']}").text
-    assert 'class="chip"' not in page
+    assert "inline-flex items-center gap-1 rounded-full" not in page
     assert "+ Add type" in page
     assert 'name="type_id"' in page
 

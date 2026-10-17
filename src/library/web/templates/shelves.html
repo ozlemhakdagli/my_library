@@ -4,12 +4,12 @@
 <h1>{{ t("title_shelves") }}</h1>
 
 {% if error %}
-<p class="msg" role="alert">{{ error }}</p>
+<p class="rounded-md bg-[var(--badge-bg)] p-3 text-[var(--accent)]" role="alert">{{ error }}</p>
 {% endif %}
 
-<section class="panel">
+<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
   <form method="post" action="/shelves?lang={{ lang }}">
-    <label class="field">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
       <span>{{ t("manage_name") }}</span>
       <input type="text" name="name" value="{{ form_name or '' }}" maxlength="200" required>
     </label>
@@ -18,12 +18,12 @@
 </section>
 
 {% if items %}
-<ul class="book-list">
+<ul class="divide-y divide-[var(--line)]">
   {% for item in items %}
-  <li class="book">
-    <div class="book-title">{{ item.name }}</div>
-    <div class="book-meta"><span>{{ t("manage_book_count", count=item.book_count) }}</span></div>
-    <div class="actions">
+  <li class="py-3 [overflow-wrap:anywhere]">
+    <div class="font-semibold">{{ item.name }}</div>
+    <div class="flex flex-wrap gap-x-3 text-sm text-[var(--muted)]"><span>{{ t("manage_book_count", count=item.book_count) }}</span></div>
+    <div class="mt-2 flex flex-wrap items-center gap-3">
       <form method="post" action="/shelves/{{ item.id }}/rename?lang={{ lang }}">
         <input type="text" name="name" value="{{ item.name }}" maxlength="200" required aria-label="{{ t('manage_name') }}">
         <button type="submit">{{ t("btn_rename") }}</button>
@@ -36,6 +36,6 @@
   {% endfor %}
 </ul>
 {% else %}
-<p class="empty">{{ t("manage_empty_shelves") }}</p>
+<p class="text-[var(--muted)]">{{ t("manage_empty_shelves") }}</p>
 {% endif %}
 {% endblock %}

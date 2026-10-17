@@ -972,3 +972,88 @@ def set_book_types(conn: sqlite3.Connection, book_id: int, type_ids: list[int]) 
         ]
         conn.execute("UPDATE book SET updated_at = ? WHERE id = ?", (ts, book_id))
         _write_history(conn, book_id, entries, ts)
+
+
+def get_reading_status(conn: sqlite3.Connection, book_id: int) -> dict | None:
+    """Stored reading status row of a book, or None when it has none yet."""
+    row = conn.execute(
+        "SELECT status, started_on, finished_on FROM reading_status WHERE book_id = ?",
+        (book_id,),
+    ).fetchone()
+    return dict(row) if row is not None else None
+
+
+def book_card_extras(conn: sqlite3.Connection, book_ids: Sequence[int]) -> dict[int, dict]:
+    """Shelf name, live type names and finished date for list cards, keyed by book id.
+
+    Kept apart from list_books, which only takes filter parameters.
+    """
+    extras: dict[int, dict] = {
+        book_id: {"shelf": None, "types": [], "finished_on": None} for book_id in book_ids
+    }
+    if not book_ids:
+        return extras
+    marks = ", ".join("?" for _ in book_ids)
+    for row in conn.execute(
+        f"SELECT b.id, s.name FROM book b JOIN shelf s ON s.id = b.shelf_id "
+        f"WHERE b.id IN ({marks})",
+        list(book_ids),
+    ):
+        extras[row["id"]]["shelf"] = row["name"]
+    for row in conn.execute(
+        "SELECT bt.book_id, t.name FROM book_type bt JOIN type t ON t.id = bt.type_id "
+        f"WHERE t.deleted_at IS NULL AND bt.book_id IN ({marks}) ORDER BY t.norm_name, t.id",
+        list(book_ids),
+    ):
+        extras[row["book_id"]]["types"].append(row["name"])
+    for row in conn.execute(
+        f"SELECT book_id, finished_on FROM reading_status WHERE book_id IN ({marks})",
+        list(book_ids),
+    ):
+        extras[row["book_id"]]["finished_on"] = row["finished_on"]
+    return extras
+
+
+def get_book_shelf_and_types(conn: sqlite3.Connection, book_id: int) -> dict:
+    """Shelf id and type chips of a book. A deleted shelf or deleted types are left out."""
+    shelf_row = conn.execute(
+        "SELECT b.shelf_id FROM book b JOIN shelf s ON s.id = b.shelf_id AND s.deleted_at IS NULL "
+        "WHERE b.id = ?",
+        (book_id,),
+    ).fetchone()
+    chips = [
+        dict(row)
+        for row in conn.execute(
+            "SELECT t.id, t.name FROM book_type bt JOIN type t ON t.id = bt.type_id "
+            "WHERE bt.book_id = ? AND t.deleted_at IS NULL ORDER BY t.norm_name, t.id",
+            (book_id,),
+        )
+    ]
+    return {
+        "shelf_id": shelf_row["shelf_id"] if shelf_row is not None else None,
+        "chips": chips,
+    }
+
+
+def reading_counts(conn: sqlite3.Connection) -> dict[str, int]:
+    """Live books per reading status. A book without a status row counts as 'unread'."""
+    counts = {status: 0 for status in READING_STATUSES}
+    rows = conn.execute(
+        "SELECT COALESCE(rs.status, 'unread') AS status, COUNT(*) AS n FROM book b "
+        "LEFT JOIN reading_status rs ON rs.book_id = b.id "
+        "WHERE b.deleted_at IS NULL GROUP BY 1"
+    ).fetchall()
+    for row in rows:
+        counts[row["status"]] = counts.get(row["status"], 0) + row["n"]
+    return counts
+
+
+def finished_per_year(conn: sqlite3.Connection) -> list[tuple[int, int]]:
+    """(year, count) of live books with status 'read' and a finished date, oldest year first."""
+    rows = conn.execute(
+        "SELECT CAST(substr(rs.finished_on, 1, 4) AS INTEGER) AS year, COUNT(*) AS n "
+        "FROM reading_status rs JOIN book b ON b.id = rs.book_id "
+        "WHERE b.deleted_at IS NULL AND rs.status = 'read' AND rs.finished_on IS NOT NULL "
+        "GROUP BY year ORDER BY year"
+    ).fetchall()
+    return [(row["year"], row["n"]) for row in rows]

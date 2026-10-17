@@ -78,8 +78,8 @@ def test_pagination_is_50_per_page(tmp_path):
     client = TestClient(create_app(Settings(port=8765, db_path=path, default_lang="en")))
 
     first = client.get("/")
-    assert first.text.count('class="book-title"') == 50
+    assert first.text.count('<li class="flex min-w-0 flex-col') == 50
     assert "1 / 2" in first.text
 
     second = client.get("/", params={"page": 2})
-    assert second.text.count('class="book-title"') == 1
+    assert second.text.count('<li class="flex min-w-0 flex-col') == 1
