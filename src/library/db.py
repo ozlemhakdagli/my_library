@@ -1,4 +1,9 @@
 import sqlite3
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+from library.norm import norm
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS publisher (
@@ -86,3 +91,377 @@ def connect(path: str) -> sqlite3.Connection:
 
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+
+
+REVIEW_STATUSES = ("ok", "needs review")
+UPDATABLE_FIELDS = ("title", "subtitle", "note", "review_status", "publisher", "authors")
+
+
+@dataclass(frozen=True)
+class HistoryEntry:
+    field: str
+    old_value: str | None
+    new_value: str | None
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _text(value: str | None) -> str | None:
+    """Stored form of a free-text value: stripped, empty becomes NULL."""
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
+
+
+def _split_authors(names: Sequence[str]) -> list[str]:
+    """Drop empty names and duplicates (by norm), keep order."""
+    result: list[str] = []
+    keys: set[str] = set()
+    for name in names:
+        text = (name or "").strip()
+        key = norm(text)
+        if text and key not in keys:
+            keys.add(key)
+            result.append(text)
+    return result
+
+
+def _check_review_status(value: str) -> None:
+    if value not in REVIEW_STATUSES:
+        raise ValueError(f"invalid review_status: {value!r}")
+
+
+def _get_or_create_publisher(conn: sqlite3.Connection, name: str) -> int:
+    row = conn.execute(
+        "SELECT id FROM publisher WHERE norm_name = ? AND deleted_at IS NULL ORDER BY id LIMIT 1",
+        (norm(name),),
+    ).fetchone()
+    if row is not None:
+        return row["id"]
+    return conn.execute(
+        "INSERT INTO publisher (name, norm_name) VALUES (?, ?)", (name, norm(name))
+    ).lastrowid
+
+
+def _get_or_create_author(conn: sqlite3.Connection, name: str) -> int:
+    row = conn.execute(
+        "SELECT id FROM author WHERE norm_name = ? AND deleted_at IS NULL ORDER BY id LIMIT 1",
+        (norm(name),),
+    ).fetchone()
+    if row is not None:
+        return row["id"]
+    return conn.execute(
+        "INSERT INTO author (name, norm_name) VALUES (?, ?)", (name, norm(name))
+    ).lastrowid
+
+
+def _publisher_name(conn: sqlite3.Connection, publisher_id: int | None) -> str | None:
+    if publisher_id is None:
+        return None
+    row = conn.execute(
+        "SELECT name FROM publisher WHERE id = ? AND deleted_at IS NULL", (publisher_id,)
+    ).fetchone()
+    return row["name"] if row is not None else None
+
+
+def _set_authors(conn: sqlite3.Connection, book_id: int, names: list[str]) -> None:
+    conn.execute("DELETE FROM book_author WHERE book_id = ?", (book_id,))
+    for position, name in enumerate(names):
+        author_id = _get_or_create_author(conn, name)
+        conn.execute(
+            "INSERT INTO book_author (book_id, author_id, position) VALUES (?, ?, ?)",
+            (book_id, author_id, position),
+        )
+
+
+def _authors_of(conn: sqlite3.Connection, book_id: int) -> list[str]:
+    rows = conn.execute(
+        "SELECT a.name FROM book_author ba JOIN author a ON a.id = ba.author_id "
+        "WHERE ba.book_id = ? AND a.deleted_at IS NULL "
+        "ORDER BY ba.position, ba.author_id",
+        (book_id,),
+    ).fetchall()
+    return [r["name"] for r in rows]
+
+
+def _live_book(conn: sqlite3.Connection, book_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM book WHERE id = ? AND deleted_at IS NULL", (book_id,)
+    ).fetchone()
+
+
+def _write_history(
+    conn: sqlite3.Connection, book_id: int, entries: list[HistoryEntry], changed_at: str
+) -> None:
+    for e in entries:
+        conn.execute(
+            "INSERT INTO history (record_type, record_id, field, old_value, new_value, changed_at) "
+            "VALUES ('book', ?, ?, ?, ?, ?)",
+            (book_id, e.field, e.old_value, e.new_value, changed_at),
+        )
+
+
+def _book_to_dict(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
+    book_id = row["id"]
+    status = conn.execute(
+        "SELECT status FROM reading_status WHERE book_id = ?", (book_id,)
+    ).fetchone()
+    loan = conn.execute(
+        "SELECT borrower, lent_on, returned_on FROM loan "
+        "WHERE book_id = ? AND returned_on IS NULL ORDER BY lent_on DESC, id DESC LIMIT 1",
+        (book_id,),
+    ).fetchone()
+    return {
+        "id": book_id,
+        "title": row["title"],
+        "subtitle": row["subtitle"] or "",
+        "authors": _authors_of(conn, book_id),
+        "publisher": _publisher_name(conn, row["publisher_id"]) or "",
+        "review_status": row["review_status"],
+        "note": row["note"] or "",
+        "status": status["status"] if status is not None else None,
+        "loan": dict(loan) if loan is not None else None,
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def add_book(
+    conn: sqlite3.Connection,
+    *,
+    title: str,
+    subtitle: str = "",
+    author_names: Sequence[str] = (),
+    publisher: str = "",
+    note: str = "",
+    review_status: str = "ok",
+) -> int:
+    title_text = _text(title)
+    if title_text is None:
+        raise ValueError("title is required")
+    _check_review_status(review_status)
+    names = _split_authors(author_names)
+    publisher_text = _text(publisher)
+    subtitle_text = _text(subtitle)
+    note_text = _text(note)
+    ts = _now()
+
+    with conn:
+        publisher_id = _get_or_create_publisher(conn, publisher_text) if publisher_text else None
+        cur = conn.execute(
+            "INSERT INTO book (title, subtitle, norm_title, publisher_id, review_status, note, "
+            "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                title_text,
+                subtitle_text,
+                norm(title_text),
+                publisher_id,
+                review_status,
+                note_text,
+                ts,
+                ts,
+            ),
+        )
+        book_id = cur.lastrowid
+        _set_authors(conn, book_id, names)
+        initial = {
+            "title": title_text,
+            "subtitle": subtitle_text,
+            "note": note_text,
+            "review_status": review_status,
+            "publisher": publisher_text,
+            "authors": "; ".join(names) or None,
+        }
+        entries = [HistoryEntry(f, None, v) for f, v in initial.items() if v is not None]
+        _write_history(conn, book_id, entries, ts)
+    return book_id
+
+
+def get_book(conn: sqlite3.Connection, book_id: int) -> dict | None:
+    row = _live_book(conn, book_id)
+    if row is None:
+        return None
+    return _book_to_dict(conn, row)
+
+
+def update_book(conn: sqlite3.Connection, book_id: int, changes: dict[str, str]) -> list[HistoryEntry]:
+    """Apply changes; write one history row per changed field in one transaction.
+
+    `authors` is a single string with names separated by ";".
+    Returns the history entries written (empty if nothing changed).
+    """
+    unknown = set(changes) - set(UPDATABLE_FIELDS)
+    if unknown:
+        raise ValueError(f"unknown fields: {sorted(unknown)}")
+
+    ts = _now()
+    with conn:
+        row = _live_book(conn, book_id)
+        if row is None:
+            raise ValueError(f"book {book_id} not found")
+
+        columns: dict[str, object] = {}
+        entries: list[HistoryEntry] = []
+
+        for field, raw in changes.items():
+            if field == "title":
+                new = _text(raw)
+                if new is None:
+                    raise ValueError("title is required")
+                if new != row["title"]:
+                    columns["title"] = new
+                    columns["norm_title"] = norm(new)
+                    entries.append(HistoryEntry("title", row["title"], new))
+            elif field in ("subtitle", "note"):
+                new = _text(raw)
+                if new != row[field]:
+                    columns[field] = new
+                    entries.append(HistoryEntry(field, row[field], new))
+            elif field == "review_status":
+                _check_review_status(raw)
+                if raw != row["review_status"]:
+                    columns["review_status"] = raw
+                    entries.append(HistoryEntry("review_status", row["review_status"], raw))
+            elif field == "publisher":
+                new = _text(raw)
+                old = _publisher_name(conn, row["publisher_id"])
+                if new != old:
+                    columns["publisher_id"] = (
+                        _get_or_create_publisher(conn, new) if new is not None else None
+                    )
+                    entries.append(HistoryEntry("publisher", old, new))
+            elif field == "authors":
+                names = _split_authors(raw.split(";"))
+                old_names = _authors_of(conn, book_id)
+                if names != old_names:
+                    _set_authors(conn, book_id, names)
+                    entries.append(
+                        HistoryEntry(
+                            "authors",
+                            "; ".join(old_names) or None,
+                            "; ".join(names) or None,
+                        )
+                    )
+
+        if entries:
+            columns["updated_at"] = ts
+            assignments = ", ".join(f"{col} = ?" for col in columns)
+            conn.execute(
+                f"UPDATE book SET {assignments} WHERE id = ?",
+                [*columns.values(), book_id],
+            )
+            _write_history(conn, book_id, entries, ts)
+    return entries
+
+
+def soft_delete_book(conn: sqlite3.Connection, book_id: int) -> None:
+    ts = _now()
+    with conn:
+        if _live_book(conn, book_id) is None:
+            return
+        conn.execute(
+            "UPDATE book SET deleted_at = ?, updated_at = ? WHERE id = ?", (ts, ts, book_id)
+        )
+        _write_history(conn, book_id, [HistoryEntry("deleted_at", None, ts)], ts)
+
+
+def _filter_sql(
+    *,
+    query: str,
+    status: str | None,
+    loan: str | None,
+    publisher: str | None,
+    author: str | None,
+    needs_review: bool,
+) -> tuple[str, str, list[object]]:
+    from_sql = (
+        "FROM book b "
+        "LEFT JOIN publisher p ON p.id = b.publisher_id "
+        "LEFT JOIN reading_status rs ON rs.book_id = b.id"
+    )
+    where = ["b.deleted_at IS NULL"]
+    params: list[object] = []
+
+    key = norm(query)
+    if key:
+        pattern = f"%{key}%"
+        where.append(
+            "(b.norm_title LIKE ? OR p.norm_name LIKE ? OR EXISTS ("
+            "SELECT 1 FROM book_author ba JOIN author a ON a.id = ba.author_id "
+            "WHERE ba.book_id = b.id AND a.deleted_at IS NULL AND a.norm_name LIKE ?))"
+        )
+        params += [pattern, pattern, pattern]
+    if status:
+        where.append("rs.status = ?")
+        params.append(status)
+    if loan is not None:
+        if loan not in ("out", "in"):
+            raise ValueError(f"loan must be 'out' or 'in': {loan!r}")
+        exists = "EXISTS" if loan == "out" else "NOT EXISTS"
+        where.append(
+            f"{exists} (SELECT 1 FROM loan l WHERE l.book_id = b.id AND l.returned_on IS NULL)"
+        )
+    if publisher:
+        where.append("p.norm_name = ?")
+        params.append(norm(publisher))
+    if author:
+        where.append(
+            "EXISTS (SELECT 1 FROM book_author ba JOIN author a ON a.id = ba.author_id "
+            "WHERE ba.book_id = b.id AND a.deleted_at IS NULL AND a.norm_name = ?)"
+        )
+        params.append(norm(author))
+    if needs_review:
+        where.append("b.review_status = 'needs review'")
+    return from_sql, " AND ".join(where), params
+
+
+def list_books(
+    conn: sqlite3.Connection,
+    *,
+    query: str = "",
+    status: str | None = None,
+    loan: str | None = None,
+    publisher: str | None = None,
+    author: str | None = None,
+    needs_review: bool = False,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[dict]:
+    from_sql, where, params = _filter_sql(
+        query=query,
+        status=status,
+        loan=loan,
+        publisher=publisher,
+        author=author,
+        needs_review=needs_review,
+    )
+    rows = conn.execute(
+        f"SELECT b.* {from_sql} WHERE {where} ORDER BY b.norm_title, b.id LIMIT ? OFFSET ?",
+        [*params, limit, offset],
+    ).fetchall()
+    return [_book_to_dict(conn, r) for r in rows]
+
+
+def count_books(
+    conn: sqlite3.Connection,
+    *,
+    query: str = "",
+    status: str | None = None,
+    loan: str | None = None,
+    publisher: str | None = None,
+    author: str | None = None,
+    needs_review: bool = False,
+) -> int:
+    from_sql, where, params = _filter_sql(
+        query=query,
+        status=status,
+        loan=loan,
+        publisher=publisher,
+        author=author,
+        needs_review=needs_review,
+    )
+    row = conn.execute(f"SELECT COUNT(*) AS n {from_sql} WHERE {where}", params).fetchone()
+    return row["n"]
