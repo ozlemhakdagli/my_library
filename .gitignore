@@ -1,0 +1,11 @@
+.venv/
+data/
+*.db
+*.db-journal
+exports/
+backups/
+*.xlsx
+*.csv
+__pycache__/
+.pytest_cache/
+*.egg-info/
