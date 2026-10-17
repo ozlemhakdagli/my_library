@@ -465,3 +465,126 @@ def count_books(
     )
     row = conn.execute(f"SELECT COUNT(*) AS n {from_sql} WHERE {where}", params).fetchone()
     return row["n"]
+
+
+READING_STATUSES = ("unread", "reading", "read", "abandoned")
+
+
+class LoanError(Exception):
+    """A loan operation conflicts with the current loan state."""
+
+
+def _open_loan(conn: sqlite3.Connection, book_id: int) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT id FROM loan WHERE book_id = ? AND returned_on IS NULL", (book_id,)
+    ).fetchone()
+
+
+def set_reading_status(
+    conn: sqlite3.Connection,
+    book_id: int,
+    status: str,
+    started_on: str | None = None,
+    finished_on: str | None = None,
+) -> None:
+    """Set reading status and dates; one history row per changed field."""
+    if status not in READING_STATUSES:
+        raise ValueError(f"invalid status: {status!r}")
+    started_text = _text(started_on)
+    finished_text = _text(finished_on)
+    ts = _now()
+
+    with conn:
+        if _live_book(conn, book_id) is None:
+            raise ValueError(f"book {book_id} not found")
+        old = conn.execute(
+            "SELECT status, started_on, finished_on FROM reading_status WHERE book_id = ?",
+            (book_id,),
+        ).fetchone()
+        old_values = (
+            {k: old[k] for k in ("status", "started_on", "finished_on")}
+            if old is not None
+            else {"status": None, "started_on": None, "finished_on": None}
+        )
+        new_values = {"status": status, "started_on": started_text, "finished_on": finished_text}
+        changed = [f for f in new_values if new_values[f] != old_values[f]]
+        if not changed:
+            return
+        conn.execute(
+            "INSERT INTO reading_status (book_id, status, started_on, finished_on) "
+            "VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(book_id) DO UPDATE SET status = excluded.status, "
+            "started_on = excluded.started_on, finished_on = excluded.finished_on",
+            (book_id, status, started_text, finished_text),
+        )
+        _write_history(
+            conn,
+            book_id,
+            [HistoryEntry(f, old_values[f], new_values[f]) for f in changed],
+            ts,
+        )
+
+
+def lend_book(conn: sqlite3.Connection, book_id: int, borrower: str, lent_on: str) -> int:
+    """Open a loan for a book. Raises LoanError if the book is already out."""
+    borrower_text = _text(borrower)
+    if borrower_text is None:
+        raise ValueError("borrower is required")
+    lent_text = _text(lent_on)
+    if lent_text is None:
+        raise ValueError("lent_on is required")
+    ts = _now()
+
+    with conn:
+        if _live_book(conn, book_id) is None:
+            raise ValueError(f"book {book_id} not found")
+        if _open_loan(conn, book_id) is not None:
+            raise LoanError("already lent")
+        cur = conn.execute(
+            "INSERT INTO loan (book_id, borrower, lent_on, returned_on) VALUES (?, ?, ?, NULL)",
+            (book_id, borrower_text, lent_text),
+        )
+        _write_history(
+            conn,
+            book_id,
+            [
+                HistoryEntry("lent_to", None, borrower_text),
+                HistoryEntry("lent_on", None, lent_text),
+            ],
+            ts,
+        )
+    return cur.lastrowid
+
+
+def return_book(conn: sqlite3.Connection, loan_id: int, returned_on: str) -> None:
+    """Close a loan. Raises LoanError if it is already closed."""
+    returned_text = _text(returned_on)
+    if returned_text is None:
+        raise ValueError("returned_on is required")
+    ts = _now()
+
+    with conn:
+        loan = conn.execute(
+            "SELECT id, book_id, returned_on FROM loan WHERE id = ?", (loan_id,)
+        ).fetchone()
+        if loan is None:
+            raise ValueError(f"loan {loan_id} not found")
+        if loan["returned_on"] is not None:
+            raise LoanError("already returned")
+        conn.execute("UPDATE loan SET returned_on = ? WHERE id = ?", (returned_text, loan_id))
+        _write_history(
+            conn,
+            loan["book_id"],
+            [HistoryEntry("returned_on", None, returned_text)],
+            ts,
+        )
+
+
+def open_loans(conn: sqlite3.Connection) -> list[dict]:
+    """Loans with no return date, oldest first."""
+    rows = conn.execute(
+        "SELECT l.id AS loan_id, l.book_id, b.title, l.borrower, l.lent_on "
+        "FROM loan l JOIN book b ON b.id = l.book_id "
+        "WHERE l.returned_on IS NULL ORDER BY l.lent_on, l.id"
+    ).fetchall()
+    return [dict(r) for r in rows]
