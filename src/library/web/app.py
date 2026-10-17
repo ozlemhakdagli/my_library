@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator
 from library import db, migrate
 from library.backup import export_csv, make_backup
 from library.config import Settings
-from library import covers
+from library import covers, ocr
 from library.covers import book_cover_color, save_cover
 from library.db import (
     READING_STATUSES,
@@ -411,6 +411,60 @@ def create_app(
                 file_name, color = save_cover(photo, book_id, settings.cover_dir)
                 db.set_book_cover(conn, book_id, file_name, color)
         return RedirectResponse(f"/books/{book_id}", status_code=303)
+
+    @app.post("/books/ocr", response_class=HTMLResponse, response_model=None)
+    def book_ocr_suggest(
+        request: Request,
+        title: Annotated[str, Form()] = "",
+        subtitle: Annotated[str, Form()] = "",
+        authors: Annotated[str, Form()] = "",
+        publisher: Annotated[str, Form()] = "",
+        note: Annotated[str, Form()] = "",
+        review_status: Annotated[str, Form()] = "ok",
+        lang: str | None = None,
+        cover: Annotated[UploadFile | None, File()] = None,
+    ) -> HTMLResponse:
+        """Read the cover photo and return the add form with title and author suggested.
+
+        Nothing is saved here. Typed values are kept when OCR finds no suggestion.
+        """
+        posted = {
+            "title": title,
+            "subtitle": subtitle,
+            "authors": authors,
+            "publisher": publisher,
+            "note": note,
+            "review_status": review_status,
+        }
+        t = translator(request, lang)
+        photo = _cover_upload_bytes(cover)
+        try:
+            _check_cover(photo)
+        except ValueError:
+            return render(
+                request,
+                "add.html",
+                lang,
+                status_code=400,
+                values=posted,
+                cover_error=t("err_cover_type"),
+                ocr_note=None,
+            )
+        suggested_title, suggested_author = ocr.suggest_title_author(ocr.ocr_text(photo))
+        values = dict(posted)
+        if suggested_title:
+            values["title"] = suggested_title
+        if suggested_author:
+            values["authors"] = suggested_author
+        note_key = "ocr_suggestion_note" if suggested_title or suggested_author else "ocr_no_suggestion"
+        return render(
+            request,
+            "add.html",
+            lang,
+            values=values,
+            cover_error=None,
+            ocr_note=t(note_key),
+        )
 
     def _detail_response(
         request: Request,

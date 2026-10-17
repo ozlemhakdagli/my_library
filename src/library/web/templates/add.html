@@ -3,37 +3,57 @@
 {% block content %}
 <h1 class="font-serif">{{ t("btn_add") }}</h1>
 
-<form class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/new" enctype="multipart/form-data">
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_title") }}</span>
-    <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
-  </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_subtitle") }}</span>
-    <input type="text" name="subtitle" value="{{ values.subtitle }}" maxlength="300">
-  </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_authors") }}</span>
-    <input type="text" name="authors" value="{{ values.authors }}" maxlength="1000">
-  </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_publisher") }}</span>
-    <input type="text" name="publisher" value="{{ values.publisher }}" maxlength="300">
-  </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-    <span>{{ t("field_note") }}</span>
-    <textarea name="note" rows="4" maxlength="5000">{{ values.note }}</textarea>
-  </label>
-  <label class="flex items-center gap-2">
-    <input type="checkbox" name="review_status" value="needs review" {% if values.review_status == "needs review" %}checked{% endif %}>
-    <span>{{ t("needs_review") }}</span>
-  </label>
+<form id="book-form" class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/new" enctype="multipart/form-data">
+  {# Only this block is replaced by the photo suggestion; the file input outside it keeps its selection. #}
+  <div id="book-fields" class="grid gap-3">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+      <span>{{ t("field_title") }}</span>
+      <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
+    </label>
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+      <span>{{ t("field_subtitle") }}</span>
+      <input type="text" name="subtitle" value="{{ values.subtitle }}" maxlength="300">
+    </label>
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+      <span>{{ t("field_authors") }}</span>
+      <input type="text" name="authors" value="{{ values.authors }}" maxlength="1000">
+    </label>
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+      <span>{{ t("field_publisher") }}</span>
+      <input type="text" name="publisher" value="{{ values.publisher }}" maxlength="300">
+    </label>
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+      <span>{{ t("field_note") }}</span>
+      <textarea name="note" rows="4" maxlength="5000">{{ values.note }}</textarea>
+    </label>
+    <label class="flex items-center gap-2">
+      <input type="checkbox" name="review_status" value="needs review" {% if values.review_status == "needs review" %}checked{% endif %}>
+      <span>{{ t("needs_review") }}</span>
+    </label>
+    {% if ocr_note %}<p class="text-sm text-muted" role="status">{{ ocr_note }}</p>{% endif %}
+    {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
+  </div>
   <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_cover") }}</span>
     <input type="file" name="cover" accept="image/*" aria-describedby="cover-help">
   </label>
   <p id="cover-help" class="text-sm text-muted">{{ t("cover_help") }}</p>
-  {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
-  <button type="submit">{{ t("btn_add") }}</button>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" id="ocr-button" disabled
+            hx-post="/books/ocr" hx-encoding="multipart/form-data"
+            hx-target="#book-fields" hx-select="#book-fields" hx-swap="outerHTML">{{ t("btn_ocr_fill") }}</button>
+    <button type="submit">{{ t("btn_add") }}</button>
+  </div>
 </form>
+<script>
+  (function () {
+    // The photo button works only once a cover file is chosen.
+    var input = document.querySelector('#book-form input[name="cover"]');
+    var button = document.getElementById("ocr-button");
+    if (!input || !button) return;
+    var sync = function () { button.disabled = !input.files || input.files.length === 0; };
+    input.addEventListener("change", sync);
+    sync();
+  })();
+</script>
 {% endblock %}
