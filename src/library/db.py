@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS photo (
     book_id INTEGER REFERENCES book(id),
     file_name TEXT NOT NULL,
     kind TEXT NOT NULL,
-    confidence REAL
+    confidence TEXT
 );
 
 CREATE TABLE IF NOT EXISTS reading_status (
@@ -488,7 +488,10 @@ def set_reading_status(
     started_on: str | None = None,
     finished_on: str | None = None,
 ) -> None:
-    """Set reading status and dates; one history row per changed field."""
+    """Set reading status and dates; one history row per changed field.
+
+    An empty or missing date keeps the stored value.
+    """
     if status not in READING_STATUSES:
         raise ValueError(f"invalid status: {status!r}")
     started_text = _text(started_on)
@@ -507,7 +510,13 @@ def set_reading_status(
             if old is not None
             else {"status": None, "started_on": None, "finished_on": None}
         )
-        new_values = {"status": status, "started_on": started_text, "finished_on": finished_text}
+        new_values = {
+            "status": status,
+            "started_on": started_text if started_text is not None else old_values["started_on"],
+            "finished_on": (
+                finished_text if finished_text is not None else old_values["finished_on"]
+            ),
+        }
         changed = [f for f in new_values if new_values[f] != old_values[f]]
         if not changed:
             return
@@ -516,7 +525,7 @@ def set_reading_status(
             "VALUES (?, ?, ?, ?) "
             "ON CONFLICT(book_id) DO UPDATE SET status = excluded.status, "
             "started_on = excluded.started_on, finished_on = excluded.finished_on",
-            (book_id, status, started_text, finished_text),
+            (book_id, status, new_values["started_on"], new_values["finished_on"]),
         )
         _write_history(
             conn,
@@ -586,6 +595,35 @@ def open_loans(conn: sqlite3.Connection) -> list[dict]:
     rows = conn.execute(
         "SELECT l.id AS loan_id, l.book_id, b.title, l.borrower, l.lent_on "
         "FROM loan l JOIN book b ON b.id = l.book_id "
-        "WHERE l.returned_on IS NULL ORDER BY l.lent_on, l.id"
+        "WHERE l.returned_on IS NULL AND b.deleted_at IS NULL ORDER BY l.lent_on, l.id"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_history(conn: sqlite3.Connection, book_id: int) -> list[dict]:
+    """Change history of a book, newest first."""
+    rows = conn.execute(
+        "SELECT field, old_value, new_value, changed_at FROM history "
+        "WHERE record_type = 'book' AND record_id = ? ORDER BY changed_at DESC, id DESC",
+        (book_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def list_photos(conn: sqlite3.Connection, book_id: int) -> list[dict]:
+    """Photo file names of a book, in import order. Only names are stored, never paths."""
+    rows = conn.execute(
+        "SELECT file_name, kind, confidence FROM photo WHERE book_id = ? ORDER BY id",
+        (book_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def list_loans(conn: sqlite3.Connection, book_id: int) -> list[dict]:
+    """All loans of a book, newest first, including returned ones."""
+    rows = conn.execute(
+        "SELECT borrower, lent_on, returned_on FROM loan "
+        "WHERE book_id = ? ORDER BY lent_on DESC, id DESC",
+        (book_id,),
     ).fetchall()
     return [dict(r) for r in rows]

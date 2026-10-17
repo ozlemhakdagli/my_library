@@ -5,8 +5,10 @@ from library.db import (
     connect,
     count_books,
     get_book,
+    get_history,
     init_schema,
     list_books,
+    list_photos,
     soft_delete_book,
     update_book,
 )
@@ -156,3 +158,52 @@ def test_list_pagination(conn):
     assert len(list_books(conn, limit=2)) == 2
     assert len(list_books(conn, limit=2, offset=4)) == 1
     assert count_books(conn) == 5
+
+
+def test_get_history_is_newest_first_with_expected_keys(conn):
+    book_id = add_book(conn, title="Eski Başlık")
+    update_book(conn, book_id, {"title": "Yeni Başlık"})
+    update_book(conn, book_id, {"subtitle": "Alt"})
+
+    history = get_history(conn, book_id)
+    assert [h["field"] for h in history][:2] == ["subtitle", "title"]
+    newest = history[0]
+    assert set(newest) == {"field", "old_value", "new_value", "changed_at"}
+    assert newest["old_value"] is None
+    assert newest["new_value"] == "Alt"
+    assert newest["changed_at"]
+    assert history[1]["old_value"] == "Eski Başlık"
+    assert history[1]["new_value"] == "Yeni Başlık"
+
+
+def test_get_history_of_book_without_changes_is_creation_only(conn):
+    book_id = add_book(conn, title="Tek")
+    fields = [h["field"] for h in get_history(conn, book_id)]
+    assert sorted(fields) == ["review_status", "title"]
+
+
+def test_list_photos_returns_names_with_spaces_and_turkish_chars(conn):
+    book_id = add_book(conn, title="Fotoğraflı Kitap")
+    conn.execute(
+        "INSERT INTO photo (book_id, file_name, kind, confidence) VALUES (?, ?, ?, ?)",
+        (book_id, "IMG 0412 Çağ Ğüş.jpg", "cover", "high"),
+    )
+    conn.execute(
+        "INSERT INTO photo (book_id, file_name, kind, confidence) VALUES (?, ?, ?, ?)",
+        (book_id, "sirt.jpg", "spine", "low"),
+    )
+    photos = list_photos(conn, book_id)
+    assert [p["file_name"] for p in photos] == ["IMG 0412 Çağ Ğüş.jpg", "sirt.jpg"]
+    assert photos[0]["kind"] == "cover"
+    assert photos[0]["confidence"] == "high"
+    assert set(photos[0]) == {"file_name", "kind", "confidence"}
+
+
+def test_list_photos_of_book_without_photos_is_empty(conn):
+    book_id = add_book(conn, title="Fotosuz")
+    assert list_photos(conn, book_id) == []
+
+
+def test_photo_confidence_column_is_text(conn):
+    columns = {row["name"]: row["type"] for row in conn.execute("PRAGMA table_info(photo)")}
+    assert columns["confidence"] == "TEXT"

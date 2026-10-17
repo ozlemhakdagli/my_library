@@ -180,3 +180,103 @@ def test_status_valid_value_is_saved(client, db_path):
     )
     assert response.status_code == 303
     assert load(db_path, book_id)["status"] == "read"
+
+
+ENGLISH_DETAIL_LABELS = [
+    "Edit</a>",
+    "Started",
+    "Finished",
+    "Change history",
+    "Photos",
+    "Loan history",
+    "Old value",
+    "New value",
+    "Field",
+    "When",
+]
+
+
+def seed_detailed_book(db_path):
+    """A book with a title change, a loan, a reading date and a photo with spaces and Turkish letters."""
+    conn = db.connect(db_path)
+    try:
+        book_id = db.add_book(conn, title="Eski Ad", author_names=["Ayşe Yılmaz"])
+        db.update_book(conn, book_id, {"title": "Yeni Ad"})
+        loan_id = db.lend_book(conn, book_id, "Mehmet Öz", "2026-10-02")
+        db.return_book(conn, loan_id, "2026-10-04")
+        db.set_reading_status(conn, book_id, "reading", started_on="2026-10-01")
+        conn.execute(
+            "INSERT INTO photo (book_id, file_name, kind, confidence) VALUES (?, ?, ?, ?)",
+            (book_id, "IMG 0412 Çağ Ğüş.jpg", "cover", "high"),
+        )
+        conn.commit()
+        return book_id
+    finally:
+        conn.close()
+
+
+def test_detail_shows_change_history_in_english(client, db_path):
+    book_id = seed_detailed_book(db_path)
+    text = client.get(f"/books/{book_id}").text
+    assert "Change history" in text
+    assert "Eski Ad" in text
+    assert "Yeni Ad" in text
+    assert "Old value" in text and "New value" in text
+
+
+def test_detail_shows_change_history_in_turkish(client, db_path):
+    book_id = seed_detailed_book(db_path)
+    text = client.get(f"/books/{book_id}", params={"lang": "tr"}).text
+    assert "Değişiklik geçmişi" in text
+    assert "Eski değer" in text and "Yeni değer" in text
+
+
+def test_detail_shows_loan_history_with_borrower(client, db_path):
+    book_id = seed_detailed_book(db_path)
+    text = client.get(f"/books/{book_id}").text
+    assert "Loan history" in text
+    assert "Mehmet Öz" in text
+    assert "2026-10-04" in text
+
+
+def test_detail_photo_name_is_plain_text_without_server_path(client, db_path):
+    book_id = seed_detailed_book(db_path)
+    text = client.get(f"/books/{book_id}").text
+    assert "IMG 0412 Çağ Ğüş.jpg" in text
+    assert 'href="IMG' not in text
+    assert "/IMG" not in text
+    assert "IMG%200412" not in text
+    assert 'src="IMG' not in text
+
+
+def test_detail_shows_photos_heading_without_photos(client, db_path):
+    book_id = book_id_by_title(db_path, "Lonely Book")
+    text = client.get(f"/books/{book_id}").text
+    assert "Photos" in text
+
+
+def test_turkish_detail_uses_no_english_labels(client, db_path):
+    book_id = seed_detailed_book(db_path)
+    text = client.get(f"/books/{book_id}", params={"lang": "tr"}).text
+    leaked = [label for label in ENGLISH_DETAIL_LABELS if label in text]
+    assert leaked == []
+    assert "Düzenle</a>" in text
+
+
+def test_status_post_without_dates_keeps_started_on(client, db_path):
+    book_id = seed_detailed_book(db_path)
+    response = client.post(
+        f"/books/{book_id}/status",
+        data={"status": "read", "started_on": "", "finished_on": ""},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    conn = db.connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT status, started_on FROM reading_status WHERE book_id = ?", (book_id,)
+        ).fetchone()
+    finally:
+        conn.close()
+    assert row["status"] == "read"
+    assert row["started_on"] == "2026-10-01"

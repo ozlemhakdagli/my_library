@@ -271,9 +271,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def book_detail(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:
         with _open_db(settings) as conn:
             book = db.get_book(conn, book_id)
-        if book is None:
-            raise HTTPException(status_code=404)
-        return render(request, "detail.html", lang, book=book)
+            if book is None:
+                raise HTTPException(status_code=404)
+            history = db.get_history(conn, book_id)
+            photos = db.list_photos(conn, book_id)
+            loans = db.list_loans(conn, book_id)
+        return render(
+            request, "detail.html", lang, book=book, history=history, photos=photos, loans=loans
+        )
 
     @app.get("/books/{book_id}/edit", response_class=HTMLResponse)
     def book_edit_form(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:
