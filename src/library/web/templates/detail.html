@@ -2,7 +2,7 @@
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
 <h1>{{ book.title }}</h1>
-{% if book.subtitle %}<p class="text-sm text-[var(--muted)]">{{ book.subtitle }}</p>{% endif %}
+{% if book.subtitle %}<p class="text-sm text-muted">{{ book.subtitle }}</p>{% endif %}
 
 <dl class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-2">
   <dt>{{ t("field_authors") }}</dt>
@@ -19,7 +19,7 @@
   <dd>{% if book.loan %}{{ book.loan.borrower }}{% else %}{{ t("not_on_loan") }}{% endif %}</dd>
   {% if book.review_status == "needs review" %}
   <dt>{{ t("needs_review") }}</dt>
-  <dd><span class="inline-block rounded-full bg-[var(--warn-bg)] px-2 py-0.5 text-xs text-[var(--warn)]">{{ t("needs_review") }}</span></dd>
+  <dd><span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">{{ t("needs_review") }}</span></dd>
   {% endif %}
 </dl>
 
@@ -28,8 +28,8 @@
 
 <p class="mt-2 flex flex-wrap items-center gap-3"><a href="/books/{{ book.id }}/edit?lang={{ lang }}">{{ t("btn_edit") }}</a></p>
 
-<form class="grid gap-3 rounded-xl border border-[var(--line)] p-4" method="post" action="/books/{{ book.id }}/status">
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+<form class="grid gap-3 rounded-xl border border-line p-4" method="post" action="/books/{{ book.id }}/status">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_status") }}</span>
     <select name="status">
       {% for s in statuses %}
@@ -37,18 +37,18 @@
       {% endfor %}
     </select>
   </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_started") }}</span>
     <input type="text" name="started_on" placeholder="YYYY-MM-DD">
   </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_finished") }}</span>
     <input type="text" name="finished_on" placeholder="YYYY-MM-DD">
   </label>
   <button type="submit">{{ t("btn_save") }}</button>
 </form>
 
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<section class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("loan_history_title") }}</h2>
   {% if loans %}
   <table class="w-full border-collapse text-left text-sm [&_td]:py-1 [&_td]:pr-3 [&_td]:align-top [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold">
@@ -70,11 +70,11 @@
     </tbody>
   </table>
   {% else %}
-  <p class="text-[var(--muted)]">{{ t("loan_empty") }}</p>
+  <p class="text-muted">{{ t("loan_empty") }}</p>
   {% endif %}
 </section>
 
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<section class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("history_title") }}</h2>
   {% if history %}
   <table class="w-full border-collapse text-left text-sm [&_td]:py-1 [&_td]:pr-3 [&_td]:align-top [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold">
@@ -98,11 +98,11 @@
     </tbody>
   </table>
   {% else %}
-  <p class="text-[var(--muted)]">{{ t("history_empty") }}</p>
+  <p class="text-muted">{{ t("history_empty") }}</p>
   {% endif %}
 </section>
 
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<section class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("photos_title") }}</h2>
   {% if photos %}
   <ul class="list-disc pl-5 text-sm">
@@ -111,11 +111,11 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="text-[var(--muted)]">{{ t("photos_empty") }}</p>
+  <p class="text-muted">{{ t("photos_empty") }}</p>
   {% endif %}
 </section>
 
-<form class="grid gap-3 rounded-xl border border-[var(--line)] p-4" method="post" action="/books/{{ book.id }}/delete">
-  <button type="submit" class="bg-red-700 text-white">{{ t("btn_delete") }}</button>
+<form class="grid gap-3 rounded-xl border border-line p-4" method="post" action="/books/{{ book.id }}/delete">
+  <button type="submit" class="bg-danger text-bg">{{ t("btn_delete") }}</button>
 </form>
 {% endblock %}

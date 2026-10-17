@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Literal
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -90,12 +90,34 @@ def _change_summary(current: dict, new: BookInput, t: Callable[..., str]) -> lis
         rows.append({"label": t(label_key), "old": old_shown, "new": new_shown})
     return rows
 
+THEMES: tuple[str, ...] = ("light", "dark", "system")
+THEME_COOKIE = "theme"
+THEME_MAX_AGE = 60 * 60 * 24 * 365
+
+
+def resolve_theme(value: str | None) -> str:
+    """Return the theme from the cookie value; anything unknown means "system"."""
+    return value if value in THEMES else "system"
+
+
+def _theme_of(request: Request) -> str:
+    return resolve_theme(request.cookies.get(THEME_COOKIE))
+
+
+def _theme_class(request: Request) -> str:
+    """Class for <html>: "light" or "dark" when chosen, empty for "system"."""
+    theme = _theme_of(request)
+    return "" if theme == "system" else theme
+
+
 templates = Jinja2Templates(
     env=Environment(
         loader=FileSystemLoader(WEB_DIR / "templates"),
         autoescape=select_autoescape(["html"]),
     )
 )
+templates.env.globals["theme_of"] = _theme_of
+templates.env.globals["theme_class"] = _theme_class
 
 
 def _upgrade_existing_db(db_path: str) -> None:
@@ -844,6 +866,23 @@ def create_app(
             media_type="text/csv",
             headers={"Content-Disposition": 'attachment; filename="library.csv"'},
         )
+
+    @app.post("/settings/theme", response_model=None)
+    def settings_theme(
+        request: Request,
+        value: Annotated[str, Form(alias="theme")] = "",
+    ) -> RedirectResponse:
+        if value not in THEMES:
+            t = translator(request, None)
+            raise HTTPException(status_code=400, detail=t("err_invalid"))
+        # Return to the page the switch was used on, if it is on this site.
+        target = "/"
+        referer = urlsplit(request.headers.get("referer", ""))
+        if referer.netloc == request.url.netloc and referer.path.startswith("/"):
+            target = referer.path + (f"?{referer.query}" if referer.query else "")
+        response = RedirectResponse(target, status_code=303)
+        response.set_cookie(THEME_COOKIE, value, max_age=THEME_MAX_AGE, samesite="lax")
+        return response
 
     @app.post("/settings/language", response_model=None)
     def settings_language(

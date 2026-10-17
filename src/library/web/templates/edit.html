@@ -9,13 +9,13 @@
   {% for row in preview %}
     <tr>
       <th>{{ row.label }}</th>
-      <td class="text-[var(--muted)] line-through">{{ row.old }}</td>
+      <td class="text-muted line-through">{{ row.old }}</td>
       <td class="font-semibold">{{ row.new }}</td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
-<form class="grid gap-3 rounded-xl border border-[var(--line)] p-4" method="post" action="/books/{{ book.id }}/edit">
+<form class="grid gap-3 rounded-xl border border-line p-4" method="post" action="/books/{{ book.id }}/edit">
   <input type="hidden" name="title" value="{{ values.title }}">
   <input type="hidden" name="subtitle" value="{{ values.subtitle }}">
   <input type="hidden" name="authors" value="{{ values.authors }}">
@@ -26,24 +26,24 @@
   <button type="submit">{{ t("btn_save") }}</button>
 </form>
 {% else %}
-<form class="grid gap-3 rounded-xl border border-[var(--line)] p-4" method="post" action="/books/{{ book.id }}/edit">
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+<form class="grid gap-3 rounded-xl border border-line p-4" method="post" action="/books/{{ book.id }}/edit">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_title") }}</span>
     <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
   </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_subtitle") }}</span>
     <input type="text" name="subtitle" value="{{ values.subtitle }}" maxlength="300">
   </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_authors") }}</span>
     <input type="text" name="authors" value="{{ values.authors }}" maxlength="1000">
   </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_publisher") }}</span>
     <input type="text" name="publisher" value="{{ values.publisher }}" maxlength="300">
   </label>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_note") }}</span>
     <textarea name="note" rows="4" maxlength="5000">{{ values.note }}</textarea>
   </label>

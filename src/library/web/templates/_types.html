@@ -1,11 +1,11 @@
-<div id="types-block" class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<div id="types-block" class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("field_types") }}</h2>
-  {% if error %}<p class="text-[var(--warn)]">{{ error }}</p>{% endif %}
+  {% if error %}<p class="text-warn">{{ error }}</p>{% endif %}
   <div class="flex flex-wrap gap-2">
     {% for chip in chips %}
     <form method="post" action="/books/{{ book_id }}/types" hx-post="/books/{{ book_id }}/types" hx-target="#types-block" hx-swap="outerHTML" class="inline">
       {% for other in chips if other.id != chip.id %}<input type="hidden" name="type_id" value="{{ other.id }}">{% endfor %}
-      <span class="inline-flex items-center gap-1 rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-sm [&_button]:bg-transparent [&_button]:p-0 [&_button]:text-[var(--fg)]">{{ chip.name }}<button type="submit" aria-label="{{ t('btn_remove') }}" title="{{ t('btn_remove') }}">&times;</button></span>
+      <span class="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-sm [&_button]:bg-transparent [&_button]:p-0 [&_button]:text-ink">{{ chip.name }}<button type="submit" aria-label="{{ t('btn_remove') }}" title="{{ t('btn_remove') }}">&times;</button></span>
     </form>
     {% endfor %}
   </div>

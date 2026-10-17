@@ -6,7 +6,7 @@
     <form id="filters" method="get" action="/"
           hx-get="/" hx-target="#results" hx-swap="outerHTML" hx-push-url="true"
           hx-trigger="change, submit, input changed delay:300ms from:input[type=search], input changed delay:300ms from:input[type=text]"
-          class="grid gap-4 rounded-xl border border-[var(--line)] p-4">
+          class="grid gap-4 rounded-xl border border-line p-4">
       <input type="hidden" name="lang" value="{{ lang }}">
       <h2 class="text-base font-semibold">{{ t("filters_title") }}</h2>
 
@@ -28,7 +28,7 @@
 
       <fieldset class="grid gap-2">
         <legend class="mb-1 text-sm">{{ t("field_types") }}</legend>
-        <p class="text-sm text-[var(--muted)]">{{ t("filter_type_help") }}</p>
+        <p class="text-sm text-muted">{{ t("filter_type_help") }}</p>
         {% for type in types %}
           <label class="flex items-center gap-2">
             <input type="checkbox" name="type" value="{{ type.id }}" {% if (type.id|string) in filters.type %}checked{% endif %}>

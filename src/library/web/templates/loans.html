@@ -3,20 +3,20 @@
 {% block content %}
 <h1>{{ t("title_loans") }}</h1>
 
-{% if error %}<p class="rounded-md bg-[var(--warn-bg)] p-3 text-[var(--warn)]" role="alert">{{ error }}</p>{% endif %}
+{% if error %}<p class="rounded-md bg-warn-bg p-3 text-warn" role="alert">{{ error }}</p>{% endif %}
 
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<section class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("loans_lend_title") }}</h2>
   <form method="post" action="/loans?lang={{ lang }}">
-    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("field_book_id") }}</span>
       <input type="number" name="book_id" min="1" required>
     </label>
-    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("loan_borrower") }}</span>
       <input type="text" name="borrower" required>
     </label>
-    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("field_lent_on") }}</span>
       <input type="text" name="lent_on" value="{{ today }}" placeholder="YYYY-MM-DD" required>
     </label>
@@ -24,19 +24,19 @@
   </form>
 </section>
 
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<section class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("loans_open_title") }}</h2>
   {% if loans %}
-  <ul class="divide-y divide-[var(--line)]">
+  <ul class="divide-y divide-line">
     {% for loan in loans %}
     <li class="py-3 [overflow-wrap:anywhere]">
       <div class="font-semibold"><a href="/books/{{ loan.book_id }}?lang={{ lang }}">{{ loan.title }}</a></div>
-      <div class="flex flex-wrap gap-x-3 text-sm text-[var(--muted)]">
+      <div class="flex flex-wrap gap-x-3 text-sm text-muted">
         <span>{{ loan.borrower }}</span>
         <span>{{ t("field_lent_on") }}: {{ loan.lent_on }}</span>
       </div>
       <form method="post" action="/loans/{{ loan.loan_id }}/return?lang={{ lang }}">
-        <label class="grid gap-1 [&>span]:text-sm [&>span]:text-[var(--muted)]">
+        <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
           <span>{{ t("field_returned_on") }}</span>
           <input type="text" name="returned_on" value="{{ today }}" placeholder="YYYY-MM-DD" required>
         </label>
@@ -46,7 +46,7 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="text-[var(--muted)]">{{ t("loans_empty") }}</p>
+  <p class="text-muted">{{ t("loans_empty") }}</p>
   {% endif %}
 </section>
 {% endblock %}

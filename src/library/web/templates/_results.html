@@ -1,6 +1,6 @@
 <div id="results" class="grid gap-4">
   {% if books %}
-  <p class="text-sm text-[var(--muted)]">{{ total }}</p>
+  <p class="text-sm text-muted">{{ total }}</p>
   <ul class="grid grid-cols-1 gap-3 xl:grid-cols-2">
     {% for book in books %}
       {% include "_book_card.html" %}
@@ -19,6 +19,6 @@
   </nav>
   {% endif %}
   {% else %}
-  <p class="text-[var(--muted)]">{{ t("msg_not_found") }}</p>
+  <p class="text-muted">{{ t("msg_not_found") }}</p>
   {% endif %}
 </div>

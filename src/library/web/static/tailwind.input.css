@@ -2,41 +2,63 @@
 
 @source "../templates";
 
-/* Colour tokens used as var(--name) in the templates. Dark values apply to the
-   system preference unless data-theme="light" is set, or when data-theme="dark". */
+/* Colour tokens. Templates use semantic classes (bg-bg, text-ink, text-muted,
+   border-line, bg-accent, bg-surface, ...) that resolve to these variables.
+
+   Light values are the default. The dark set applies when <html> has class
+   "dark", or when it has no class and the system prefers dark (theme "system").
+   Class "light" on <html> forces the light set even if the system prefers dark. */
 :root {
-  --bg: #fbfaf7;
-  --fg: #1d1d1b;
-  --muted: #6b6b66;
-  --line: #d9d6cc;
-  --accent: #2f5d50;
+  --bg: #f7f4ee;
+  --surface: #fffdf9;
+  --ink: #1f1b16;
+  --muted: #6b645a;
+  --line: #e4ddd2;
+  --accent: #8a3b1f;
+  --danger: #9a2b1b;
   --warn: #8a5a00;
   --warn-bg: #fff3d6;
-  --badge-bg: #eceae3;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #1b1c1a;
-    --fg: #ecebe6;
-    --muted: #a3a29b;
-    --line: #3a3b37;
-    --accent: #8fc6b4;
+  :root:not(.light) {
+    --bg: #15130f;
+    --surface: #1d1a16;
+    --ink: #f2ede4;
+    --muted: #a39a8c;
+    --line: #2e2a24;
+    --accent: #d9825b;
+    --danger: #e8836f;
     --warn: #f2c26b;
     --warn-bg: #3a3122;
-    --badge-bg: #2a2b28;
+    color-scheme: dark;
   }
 }
 
-:root[data-theme="dark"] {
-  --bg: #1b1c1a;
-  --fg: #ecebe6;
-  --muted: #a3a29b;
-  --line: #3a3b37;
-  --accent: #8fc6b4;
+:root.dark {
+  --bg: #15130f;
+  --surface: #1d1a16;
+  --ink: #f2ede4;
+  --muted: #a39a8c;
+  --line: #2e2a24;
+  --accent: #d9825b;
+  --danger: #e8836f;
   --warn: #f2c26b;
   --warn-bg: #3a3122;
-  --badge-bg: #2a2b28;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
 }
 
 /* Element defaults for the form controls and headings used across pages.
@@ -69,8 +91,8 @@
     min-width: 0;
     padding: 0.5rem 0.625rem;
     font: inherit;
-    color: var(--fg);
-    background: var(--bg);
+    color: var(--ink);
+    background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 0.375rem;
   }
@@ -84,5 +106,15 @@
     border: 0;
     border-radius: 0.375rem;
     cursor: pointer;
+  }
+
+  /* Visible keyboard focus in both themes. */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg;
   }
 }

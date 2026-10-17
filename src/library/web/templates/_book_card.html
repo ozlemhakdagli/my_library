@@ -1,17 +1,17 @@
-<li class="flex min-w-0 flex-col gap-2 rounded-xl border border-[var(--line)] p-4">
+<li class="flex min-w-0 flex-col gap-2 rounded-xl border border-line p-4">
   <div class="font-semibold">{{ book.title }}</div>
-  {% if book.subtitle %}<div class="text-sm text-[var(--muted)]">{{ book.subtitle }}</div>{% endif %}
-  <div class="text-sm text-[var(--muted)]">
+  {% if book.subtitle %}<div class="text-sm text-muted">{{ book.subtitle }}</div>{% endif %}
+  <div class="text-sm text-muted">
     <span>{{ book.authors | join("; ") or t("unknown") }}</span>
     <span>· {{ book.publisher or t("unknown") }}</span>
   </div>
   <div class="flex flex-wrap gap-2">
-    <span class="inline-block rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-xs">{{ t("field_shelf") }}: {{ book.shelf or t("book_no_shelf") }}</span>
-    {% for type_name in book.types %}<span class="inline-block rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-xs">{{ type_name }}</span>{% endfor %}
+    <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ t("field_shelf") }}: {{ book.shelf or t("book_no_shelf") }}</span>
+    {% for type_name in book.types %}<span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ type_name }}</span>{% endfor %}
   </div>
   {% include "_status.html" %}
   <div class="flex flex-wrap gap-2">
-    {% if book.loan %}<span class="inline-block rounded-full bg-[var(--badge-bg)] px-2 py-0.5 text-xs">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
-    {% if book.review_status == "needs review" %}<span class="inline-block rounded-full bg-[var(--warn-bg)] px-2 py-0.5 text-xs text-[var(--warn)]">{{ t("needs_review") }}</span>{% endif %}
+    {% if book.loan %}<span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
+    {% if book.review_status == "needs review" %}<span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">{{ t("needs_review") }}</span>{% endif %}
   </div>
 </li>

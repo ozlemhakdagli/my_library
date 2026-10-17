@@ -3,7 +3,7 @@
 {% block content %}
 <h1>{{ t("title_reading") }}</h1>
 
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<section class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("reading_counts_title") }}</h2>
   <table class="w-full border-collapse text-left text-sm [&_td]:py-1 [&_td]:pr-3 [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold">
     <thead>
@@ -23,7 +23,7 @@
   </table>
 </section>
 
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
+<section class="grid gap-3 rounded-xl border border-line p-4">
   <h2>{{ t("reading_years_title") }}</h2>
   {% if years %}
   <table class="w-full border-collapse text-left text-sm [&_td]:py-1 [&_td]:pr-3 [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold">
@@ -43,7 +43,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="text-[var(--muted)]">{{ t("reading_years_empty") }}</p>
+  <p class="text-muted">{{ t("reading_years_empty") }}</p>
   {% endif %}
 </section>
 {% endblock %}

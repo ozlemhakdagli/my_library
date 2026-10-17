@@ -4,14 +4,14 @@
 <h1>{{ t("title_review") }}</h1>
 
 {% if items %}
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
-<ul class="divide-y divide-[var(--line)]">
+<section class="grid gap-3 rounded-xl border border-line p-4">
+<ul class="divide-y divide-line">
   {% for item in items %}
   <li class="py-3 [overflow-wrap:anywhere]" data-review-id="{{ item.id }}">
     <div class="font-semibold">
       {% if item.book_id %}{{ item.title }}{% else %}{{ t("unreadable_title") }}{% endif %}
     </div>
-    <div class="flex flex-wrap gap-x-3 text-sm text-[var(--muted)]">
+    <div class="flex flex-wrap gap-x-3 text-sm text-muted">
       <span>{{ t("field_reason") }}: {{ item.reason_label }}</span>
       {% if item.photo_file %}<span>{{ t("field_photo") }}: {{ item.photo_file }}</span>{% endif %}
     </div>
@@ -35,8 +35,8 @@
 </nav>
 {% endif %}
 {% else %}
-<section class="grid gap-3 rounded-xl border border-[var(--line)] p-4">
-  <p class="text-[var(--muted)]">{{ t("review_empty") }}</p>
+<section class="grid gap-3 rounded-xl border border-line p-4">
+  <p class="text-muted">{{ t("review_empty") }}</p>
 </section>
 {% endif %}
 {% endblock %}
