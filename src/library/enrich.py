@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import httpx
 
 from library import db
+from library.llm import LLMError, chat_json
 from library.norm import norm
 
 SEARCH_URL = "https://openlibrary.org/search.json"
@@ -51,6 +52,7 @@ SUBJECT_TYPES = {
     "essay": "Deneme",
 }
 MAX_TYPES_PER_BOOK = 2
+ALLOWED_TYPES = sorted(set(SUBJECT_TYPES.values()))
 
 
 class TooManyRequests(Exception):
@@ -100,10 +102,40 @@ def lookup_subjects(client: httpx.Client, title: str, author: str | None) -> lis
     return []
 
 
-def enrich_types(conn, client: httpx.Client, delay: float = 1.0, sleep=time.sleep) -> EnrichReport:
-    """Give every book without a type the types its subjects suggest. Safe to run again."""
+def classify_with_model(llm_client, settings, title: str, authors: list[str]) -> list[str]:
+    """Ask the local model to pick types from ALLOWED_TYPES only. Unknown answers are dropped."""
+    system = (
+        "You classify books by genre. Choose at most two names from this list only: "
+        + ", ".join(ALLOWED_TYPES)
+        + '. Reply with one JSON object and nothing else: {"types": ["..."]}. '
+        'If you do not know the book, reply {"types": []}.'
+    )
+    user = f"Title: {title}\nAuthor: {', '.join(authors) or 'unknown'}"
+    obj = chat_json(llm_client, settings, system, user)
+    raw = obj.get("types")
+    if not isinstance(raw, list):
+        return []
+    names: list[str] = []
+    for item in raw:
+        if isinstance(item, str) and item in ALLOWED_TYPES and item not in names:
+            names.append(item)
+    return names[:MAX_TYPES_PER_BOOK]
+
+
+def enrich_types(
+    conn,
+    client: httpx.Client,
+    delay: float = 1.0,
+    sleep=time.sleep,
+    classify=None,
+    limit: int | None = None,
+) -> EnrichReport:
+    """Give books without a type the types their subjects suggest, else the model's pick.
+
+    Safe to run again. classify(title, authors) -> list[str] is optional.
+    """
     report = EnrichReport()
-    for book in db.books_without_types(conn):
+    for book in db.books_without_types(conn)[: limit or None]:
         report.checked += 1
         author = book["authors"][0] if book["authors"] else None
         try:
@@ -112,6 +144,12 @@ def enrich_types(conn, client: httpx.Client, delay: float = 1.0, sleep=time.slee
             report.stopped_early = True
             break
         names = types_for_subjects(subjects)
+        if not names and classify is not None:
+            try:
+                names = classify(book["title"], book["authors"])
+            except (LLMError, httpx.HTTPError):
+                names = []
+        names = [n for n in names if n in ALLOWED_TYPES][:MAX_TYPES_PER_BOOK]
         if not names:
             report.no_match += 1
         else:
@@ -128,8 +166,20 @@ def main() -> None:
     settings = Settings.from_env()
     conn = db.connect(settings.db_path)
     db.init_schema(conn)
+    import argparse
+
+    from library.llm import make_client
+
+    parser = argparse.ArgumentParser(description="Fill missing book types.")
+    parser.add_argument("--limit", type=int, default=None, help="process at most this many books")
+    parser.add_argument("--no-model", action="store_true", help="do not ask the local model")
+    args = parser.parse_args()
+    llm_client = make_client(settings)
+    classify = None if args.no_model else (
+        lambda title, authors: classify_with_model(llm_client, settings, title, authors)
+    )
     with httpx.Client(timeout=15.0) as client:
-        report = enrich_types(conn, client)
+        report = enrich_types(conn, client, classify=classify, limit=args.limit)
     conn.close()
     print(
         f"checked={report.checked} updated={report.updated} "

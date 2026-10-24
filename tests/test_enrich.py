@@ -76,3 +76,32 @@ def test_rate_limit_stops_and_reports(tmp_path):
     assert report.stopped_early is True
     assert report.updated == 0
     conn.close()
+
+
+def test_model_fallback_fills_types_when_subjects_are_missing(tmp_path):
+    conn = db.connect(str(tmp_path / "m.db"))
+    db.init_schema(conn)
+    book = db.add_book(conn, title="Turkish novel", author_names=["Local Author"])
+    report = enrich_types(
+        conn,
+        _client(status=404),
+        delay=0,
+        sleep=lambda s: None,
+        classify=lambda title, authors: ["Roman", "Not a real type"],
+    )
+    assert report.updated == 1
+    names = [r[0] for r in conn.execute(
+        "SELECT t.name FROM book_type bt JOIN type t ON t.id = bt.type_id WHERE bt.book_id = ?", (book,)
+    ).fetchall()]
+    assert names == ["Roman"]
+    conn.close()
+
+
+def test_limit_processes_only_that_many(tmp_path):
+    conn = db.connect(str(tmp_path / "l.db"))
+    db.init_schema(conn)
+    db.add_book(conn, title="A", author_names=[])
+    db.add_book(conn, title="B", author_names=[])
+    report = enrich_types(conn, _client(status=404), delay=0, sleep=lambda s: None, limit=1)
+    assert report.checked == 1
+    conn.close()
