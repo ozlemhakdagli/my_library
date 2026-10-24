@@ -64,6 +64,7 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-danger: var(--danger);
   --color-warn: var(--warn);
   --color-warn-bg: var(--warn-bg);
@@ -162,3 +163,51 @@
 .ask-books { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
 .ask-book { display: grid; gap: .1rem; }
 .ask-book-meta { font-size: .85rem; color: var(--color-muted, #6b645a); }
+
+/* Floating assistant (assistant.js) */
+.assistant-fab {
+  position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 40;
+  display: inline-flex; align-items: center; gap: .55rem;
+  padding: .7rem 1.1rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--color-accent); color: var(--color-accent-ink, #fff);
+  font: 600 .92rem/1 system-ui, sans-serif; box-shadow: 0 10px 28px rgba(0,0,0,.18);
+}
+.assistant-fab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.assistant-fab:hover { filter: brightness(1.05); }
+.assistant-panel {
+  position: fixed; right: 1.25rem; bottom: 5rem; z-index: 50;
+  width: min(26rem, calc(100vw - 2.5rem)); height: min(40rem, calc(100vh - 7rem));
+  display: flex; flex-direction: column;
+  background: var(--color-surface); color: var(--color-ink);
+  border: 1px solid var(--color-line); border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.22); overflow: hidden;
+}
+.assistant-panel[hidden] { display: none; }
+.assistant-head { display: flex; align-items: center; justify-content: space-between; padding: .85rem 1rem; border-bottom: 1px solid var(--color-line); }
+.assistant-head h2 { margin: 0; font: 600 1rem/1.2 ui-serif, Georgia, serif; }
+.assistant-icon { border: 0; background: transparent; color: var(--color-muted); font-size: 1.4rem; line-height: 1; cursor: pointer; padding: .2rem .4rem; border-radius: 8px; }
+.assistant-log { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .75rem; }
+.assistant-intro { margin: 0; color: var(--color-muted); font-size: .9rem; }
+.assistant-msg { max-width: 88%; padding: .6rem .8rem; border-radius: 14px; font-size: .93rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.assistant-msg-user { align-self: flex-end; background: var(--color-accent); color: var(--color-accent-ink, #fff); border-bottom-right-radius: 4px; }
+.assistant-msg-assistant { align-self: flex-start; background: var(--color-bg); border: 1px solid var(--color-line); border-bottom-left-radius: 4px; display: flex; flex-direction: column; gap: .5rem; }
+.assistant-step { font-size: .8rem; color: var(--color-muted); }
+.assistant-thinking summary { cursor: pointer; font-size: .8rem; color: var(--color-muted); }
+.assistant-thinking pre { margin: .4rem 0 0; max-height: 9rem; overflow: auto; white-space: pre-wrap; font: .78rem/1.45 ui-monospace, monospace; color: var(--color-muted); }
+.assistant-answer { white-space: pre-wrap; }
+.assistant-books { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.assistant-books li { display: grid; }
+.assistant-books span { font-size: .8rem; color: var(--color-muted); }
+.assistant-form { display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid var(--color-line); }
+.assistant-form textarea {
+  flex: 1; resize: none; min-height: 2.5rem; max-height: 140px; padding: .55rem .7rem;
+  border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-bg); color: var(--color-ink);
+  font: inherit; font-size: .93rem;
+}
+.assistant-send { border: 0; border-radius: 12px; padding: 0 1rem; background: var(--color-accent); color: var(--color-accent-ink, #fff); font-weight: 600; cursor: pointer; }
+.assistant-send:disabled { opacity: .5; cursor: default; }
+.assistant-hint { margin: 0; padding: 0 .9rem .7rem; font-size: .75rem; color: var(--color-muted); }
+@media (max-width: 40rem) {
+  .assistant-panel { right: .5rem; left: .5rem; width: auto; bottom: 4.5rem; height: calc(100vh - 6rem); }
+  .assistant-fab { right: .75rem; bottom: .75rem; }
+}

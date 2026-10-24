@@ -104,3 +104,12 @@ def test_ask_page_contains_live_panel_and_script(db_path):
     assert 'id="ask-live"' in html
     assert 'data-stream="/ask/stream"' in html
     assert "/static/ask.js" in html
+
+
+def test_floating_assistant_is_on_every_page(db_path):
+    client = TestClient(create_app(_settings(db_path)))
+    for path in ("/", "/reading", "/ask"):
+        html = client.get(path).text
+        assert 'id="assistant-toggle"' in html, path
+        assert 'data-endpoint="/ask/stream"' in html, path
+        assert "/static/assistant.js" in html, path

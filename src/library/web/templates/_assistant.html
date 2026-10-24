@@ -1,0 +1,21 @@
+<button type="button" class="assistant-fab" id="assistant-toggle" aria-expanded="false" aria-controls="assistant-panel">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>
+  <span>{{ t("assistant_open") }}</span>
+</button>
+
+<section class="assistant-panel" id="assistant-panel" role="dialog" aria-modal="false" aria-labelledby="assistant-title" hidden
+         data-endpoint="/ask/stream" data-failed="{{ t('ask_error_unavailable') }}" data-thinking-label="{{ t('ask_thinking') }}">
+  <header class="assistant-head">
+    <h2 id="assistant-title">{{ t("assistant_title") }}</h2>
+    <button type="button" class="assistant-icon" id="assistant-close" aria-label="{{ t('assistant_close') }}">&times;</button>
+  </header>
+  <div class="assistant-log" id="assistant-log" aria-live="polite">
+    <p class="assistant-intro">{{ t("assistant_intro") }}</p>
+  </div>
+  <form class="assistant-form" id="assistant-form">
+    <label class="sr-only" for="assistant-input">{{ t("assistant_placeholder") }}</label>
+    <textarea id="assistant-input" name="question" rows="1" maxlength="500" required placeholder="{{ t('assistant_placeholder') }}"></textarea>
+    <button type="submit" class="assistant-send">{{ t("assistant_send") }}</button>
+  </form>
+  <p class="assistant-hint">{{ t("assistant_hint") }}</p>
+</section>
