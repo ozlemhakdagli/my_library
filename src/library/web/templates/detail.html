@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
-{% set current = book.status or "unread" %}
 <div class="grid gap-6 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
   <div class="mx-auto grid w-full max-w-60 gap-3 md:mx-0">
     {% include "_cover.html" %}
@@ -35,31 +34,7 @@
 
     <section class="grid gap-3" aria-labelledby="reading-status-title">
       <h2 id="reading-status-title" class="sr-only">{{ t("field_status") }}</h2>
-      <form method="post" action="/books/{{ book.id }}/status" role="group" aria-label="{{ t('status_group_label') }}"
-            class="flex w-full gap-1 rounded-full border border-line p-1">
-        {% for s in statuses %}
-        <button type="submit" name="status" value="{{ s }}" aria-pressed="{{ 'true' if current == s else 'false' }}"
-          class="flex-1 justify-center whitespace-nowrap rounded-full bg-transparent px-2 py-1 text-sm text-ink aria-pressed:bg-accent aria-pressed:text-bg">{{ t("status_" ~ s) }}</button>
-        {% endfor %}
-      </form>
-
-      {% if current in ["reading", "read"] %}
-      <form method="post" action="/books/{{ book.id }}/status" class="grid gap-3 sm:grid-cols-2">
-        <input type="hidden" name="status" value="{{ current }}">
-        <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-          <span>{{ t("field_started") }}</span>
-          <input type="text" name="started_on" value="{{ book.started_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
-        </label>
-        {% if current == "read" %}
-        <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-          <span>{{ t("field_finished") }}</span>
-          <input type="text" name="finished_on" value="{{ book.finished_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
-        </label>
-        {% endif %}
-        <p id="date-help" class="text-sm text-muted sm:col-span-2">{{ t("date_help") }}</p>
-        <div class="sm:col-span-2"><button type="submit">{{ t("btn_save_dates") }}</button></div>
-      </form>
-      {% endif %}
+      {% set status_strip = true %}
       {% include "_status.html" %}
     </section>
 

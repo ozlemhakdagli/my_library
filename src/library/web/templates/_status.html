@@ -1,3 +1,43 @@
-<div id="status-{{ book.id }}" class="flex flex-col gap-2">
+{#
+  Reading status block: status strip, badge and date fields, plus any error.
+  Used by detail.html and by the HTMX status route, which swaps this whole block.
+  Needs `book` (id, status, started_on, finished_on), `error` and `t`. The strip,
+  badge and date fields show only when `status_strip` is set; the quick-status
+  endpoint leaves it unset and gets just the error line, as before.
+#}
+{% set current = book.status or "unread" %}
+<div id="status-{{ book.id }}" class="grid gap-3">
+  {% if status_strip %}
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs text-muted">{{ t("status_" ~ current) }}</span>
+  </div>
+  <form method="post" action="/books/{{ book.id }}/status" role="group" aria-label="{{ t('status_group_label') }}"
+        class="flex w-full gap-1 rounded-full border border-line p-1">
+    {% for s in statuses %}
+    <button type="submit" name="status" value="{{ s }}" aria-pressed="{{ 'true' if current == s else 'false' }}"
+      hx-post="/books/{{ book.id }}/status" hx-target="#status-{{ book.id }}" hx-swap="outerHTML"
+      class="flex-1 justify-center whitespace-nowrap rounded-full bg-transparent px-2 py-1 text-sm text-ink aria-pressed:bg-accent aria-pressed:text-bg">{{ t("status_" ~ s) }}</button>
+    {% endfor %}
+  </form>
+
+  {% if current in ["reading", "read"] %}
+  <form method="post" action="/books/{{ book.id }}/status" class="grid gap-3 sm:grid-cols-2"
+        hx-post="/books/{{ book.id }}/status" hx-target="#status-{{ book.id }}" hx-swap="outerHTML">
+    <input type="hidden" name="status" value="{{ current }}">
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+      <span>{{ t("field_started") }}</span>
+      <input type="text" name="started_on" value="{{ book.started_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
+    </label>
+    {% if current == "read" %}
+    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+      <span>{{ t("field_finished") }}</span>
+      <input type="text" name="finished_on" value="{{ book.finished_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
+    </label>
+    {% endif %}
+    <p id="date-help" class="text-sm text-muted sm:col-span-2">{{ t("date_help") }}</p>
+    <div class="sm:col-span-2"><button type="submit">{{ t("btn_save_dates") }}</button></div>
+  </form>
+  {% endif %}
+  {% endif %}
   {% if error %}<p class="text-sm text-warn" role="alert">{{ error }}</p>{% endif %}
 </div>

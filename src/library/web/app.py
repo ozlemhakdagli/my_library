@@ -1024,7 +1024,7 @@ def create_app(
             db.soft_delete_book(conn, book_id)
         return RedirectResponse("/", status_code=303)
 
-    @app.post("/books/{book_id}/status")
+    @app.post("/books/{book_id}/status", response_model=None)
     def book_status(
         request: Request,
         book_id: int,
@@ -1032,19 +1032,44 @@ def create_app(
         started_on: Annotated[str, Form()] = "",
         finished_on: Annotated[str, Form()] = "",
         lang: str | None = None,
-    ) -> RedirectResponse:
+    ) -> HTMLResponse | RedirectResponse:
+        """Save status and dates. HTMX gets the _status.html block back; plain posts redirect."""
+        htmx = "HX-Request" in request.headers
+        error: str | None = None
+        status_code = 200
         with _open_db(settings) as conn:
             if db.get_book(conn, book_id) is None:
                 raise HTTPException(status_code=404)
             try:
                 db.set_reading_status(conn, book_id, status, started_on, finished_on)
             except ReadingDateError as exc:
-                raise HTTPException(
-                    status_code=400, detail=translator(request, lang)(exc.code)
-                ) from exc
+                if not htmx:
+                    raise HTTPException(
+                        status_code=400, detail=translator(request, lang)(exc.code)
+                    ) from exc
+                error, status_code = translator(request, lang)(exc.code), 400
             except ValueError as exc:
-                raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return RedirectResponse(f"/books/{book_id}", status_code=303)
+                if not htmx:
+                    raise HTTPException(status_code=400, detail=str(exc)) from exc
+                error, status_code = str(exc), 400
+            if not htmx:
+                return RedirectResponse(f"/books/{book_id}", status_code=303)
+            row = db.get_reading_status(conn, book_id)
+        book = {
+            "id": book_id,
+            "status": row["status"] if row is not None else None,
+            "started_on": row["started_on"] if row is not None else None,
+            "finished_on": row["finished_on"] if row is not None else None,
+        }
+        return render(
+            request,
+            "_status.html",
+            lang,
+            status_code=status_code,
+            book=book,
+            status_strip=True,
+            error=error,
+        )
 
     @app.post("/books/{book_id}/status/quick", response_model=None)
     def book_status_quick(
