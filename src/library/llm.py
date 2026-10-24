@@ -88,6 +88,8 @@ def parse_filters(obj: dict) -> dict:
         out["status"] = status if status in FILTER_STATUSES else None
     if "needs_review" in obj and isinstance(obj["needs_review"], bool):
         out["needs_review"] = obj["needs_review"]
+    if obj.get("aggregate") == "types":
+        out["aggregate"] = "types"
     return out
 
 

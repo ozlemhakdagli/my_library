@@ -113,3 +113,50 @@ def test_floating_assistant_is_on_every_page(db_path):
         assert 'id="assistant-toggle"' in html, path
         assert 'data-endpoint="/ask/stream"' in html, path
         assert "/static/assistant.js" in html, path
+
+
+def test_count_books_by_type_counts_live_books_only(tmp_path):
+    path = str(tmp_path / "counts.db")
+    conn = db.connect(path)
+    db.init_schema(conn)
+    roman = db.add_type(conn, "Roman")
+    science = db.add_type(conn, "Bilim")
+    a = db.add_book(conn, title="A")
+    b = db.add_book(conn, title="B")
+    db.add_book(conn, title="C-no-type")
+    gone = db.add_book(conn, title="Deleted")
+    db.set_book_types(conn, a, [roman, science])
+    db.set_book_types(conn, b, [roman])
+    db.set_book_types(conn, gone, [science])
+    db.soft_delete_book(conn, gone)
+    rows, untyped, total = db.count_books_by_type(conn)
+    assert dict(rows) == {"Roman": 2, "Bilim": 1}
+    assert untyped == 1
+    assert total == 3
+    conn.close()
+
+
+def test_types_question_sends_counts_to_the_summary(db_path):
+    conn = db.connect(db_path)
+    roman = db.add_type(conn, "Roman")
+    book_id = db.add_book(conn, title="Kitap")
+    db.set_book_types(conn, book_id, [roman])
+    conn.close()
+
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content))
+        if len(calls) == 1:
+            body = _sse(_chunk(content='{"aggregate": "types"}'))
+        else:
+            body = _sse(_chunk(content="Roman: 1"))
+        return httpx.Response(200, text=body, headers={"content-type": "text/event-stream"})
+
+    client = TestClient(create_app(_settings(db_path), llm_transport=httpx.MockTransport(handler)))
+    response = client.post("/ask/stream", data={"question": "Türlerin dağılımı nedir?"})
+    assert response.status_code == 200
+    summary_user_message = calls[1]["messages"][1]["content"]
+    assert "Roman: 1" in summary_user_message
+    assert "Books per type" in summary_user_message
+    assert "event: books" in response.text

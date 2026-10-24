@@ -227,6 +227,7 @@ def _ask_filter_prompt(shelves: list[dict], types: list[dict]) -> str:
         "type (array of type names, [] if none), "
         'status (one of "unread", "reading", "read", "abandoned", or null), '
         "needs_review (boolean). "
+        'aggregate ("types" when the question asks for counts or a distribution by type, otherwise null). '
         f"Known shelves: {shelf_names}. Known types: {type_names}. "
         "Use a known name exactly when it matches."
     )
@@ -250,6 +251,13 @@ def _ask_summary_text_prompt(language: str) -> str:
         f"Keep the answer under {ASK_ANSWER_LIMIT} characters. "
         f"Write the answer in {language}."
     )
+
+
+def _ask_counts_input(question: str, rows: list[tuple[str, int]], untyped: int, total: int) -> str:
+    lines = [f"Question: {question}", f"Total books in the library: {total}", "Books per type:"]
+    lines += [f"- {name}: {count}" for name, count in rows] or ["(no types defined)"]
+    lines.append(f"- (no type): {untyped}")
+    return "\n".join(lines)
 
 
 def _ask_summary_input(question: str, books: list[dict]) -> str:
@@ -699,17 +707,26 @@ def create_app(
                 yield _sse("done", None)
                 return
 
-            yield _sse("step", t("ask_step_search"))
-            kwargs = _ask_search_kwargs(parse_filters(filter_obj), shelves, types)
-            with _open_db(settings) as conn:
-                books = db.list_books(conn, **kwargs, limit=ASK_RESULT_LIMIT)
-            yield _sse("step", t("ask_step_found", count=len(books)))
+            filters = parse_filters(filter_obj)
+            if filters.pop("aggregate", None) == "types":
+                yield _sse("step", t("ask_step_count"))
+                with _open_db(settings) as conn:
+                    rows, untyped, total = db.count_books_by_type(conn)
+                books = []
+                summary_input = _ask_counts_input(text, rows, untyped, total)
+            else:
+                yield _sse("step", t("ask_step_search"))
+                kwargs = _ask_search_kwargs(filters, shelves, types)
+                with _open_db(settings) as conn:
+                    books = db.list_books(conn, **kwargs, limit=ASK_RESULT_LIMIT)
+                summary_input = _ask_summary_input(text, books)
+                yield _sse("step", t("ask_step_found", count=len(books)))
 
             yield _sse("step", t("ask_step_answer"))
             answer_parts: list[str] = []
             try:
                 for kind, piece in stream_chat(
-                    client, settings, _ask_summary_text_prompt(language), _ask_summary_input(text, books)
+                    client, settings, _ask_summary_text_prompt(language), summary_input
                 ):
                     if kind == "thinking":
                         yield _sse("thinking", piece)

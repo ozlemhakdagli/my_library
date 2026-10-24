@@ -1100,3 +1100,27 @@ def finished_per_year(conn: sqlite3.Connection) -> list[tuple[int, int]]:
         "GROUP BY year ORDER BY year"
     ).fetchall()
     return [(row["year"], row["n"]) for row in rows]
+
+
+def count_books_by_type(conn: sqlite3.Connection) -> tuple[list[tuple[str, int]], int, int]:
+    """Live books per live type (largest first), books with no type, and total live books."""
+    rows = conn.execute(
+        """
+        SELECT t.name, COUNT(b.id) AS n
+        FROM type t
+        LEFT JOIN book_type bt ON bt.type_id = t.id
+        LEFT JOIN book b ON b.id = bt.book_id AND b.deleted_at IS NULL
+        WHERE t.deleted_at IS NULL
+        GROUP BY t.id
+        ORDER BY n DESC, t.name
+        """
+    ).fetchall()
+    untyped = conn.execute(
+        """
+        SELECT COUNT(*) FROM book b
+        WHERE b.deleted_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM book_type bt WHERE bt.book_id = b.id)
+        """
+    ).fetchone()[0]
+    total = conn.execute("SELECT COUNT(*) FROM book WHERE deleted_at IS NULL").fetchone()[0]
+    return [(row[0], row[1]) for row in rows], untyped, total
