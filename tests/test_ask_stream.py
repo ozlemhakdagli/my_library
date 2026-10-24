@@ -1,0 +1,106 @@
+import json
+
+import httpx
+import pytest
+from fastapi.testclient import TestClient
+
+from library import db
+from library.config import Settings
+from library.llm import LLMError, make_client, stream_chat
+from library.web.app import create_app
+
+
+def _sse(*payloads: dict) -> str:
+    lines = [f"data: {json.dumps(p, ensure_ascii=False)}\n\n" for p in payloads]
+    lines.append("data: [DONE]\n\n")
+    return "".join(lines)
+
+
+def _chunk(**delta) -> dict:
+    return {"choices": [{"delta": delta}]}
+
+
+def _settings(db_path) -> Settings:
+    return Settings(port=8765, db_path=db_path, default_lang="en")
+
+
+@pytest.fixture
+def db_path(tmp_path):
+    path = str(tmp_path / "test.db")
+    conn = db.connect(path)
+    db.init_schema(conn)
+    db.add_book(conn, title="Beyoğlu Rapsodisi", author_names=["Ahmet Ümit"])
+    conn.close()
+    return path
+
+
+def test_stream_chat_yields_thinking_then_content(db_path):
+    body = _sse(
+        _chunk(reasoning_content="Looking at the question. "),
+        _chunk(reasoning_content="Filters needed."),
+        _chunk(content='{"q": "Ümit"}'),
+    )
+    transport = httpx.MockTransport(lambda r: httpx.Response(200, text=body, headers={"content-type": "text/event-stream"}))
+    client = make_client(_settings(db_path), transport=transport)
+    pieces = list(stream_chat(client, _settings(db_path), "system", "user"))
+    assert pieces == [
+        ("thinking", "Looking at the question. "),
+        ("thinking", "Filters needed."),
+        ("content", '{"q": "Ümit"}'),
+    ]
+
+
+def test_stream_chat_http_error_raises(db_path):
+    transport = httpx.MockTransport(lambda r: httpx.Response(500))
+    client = make_client(_settings(db_path), transport=transport)
+    with pytest.raises(LLMError):
+        list(stream_chat(client, _settings(db_path), "system", "user"))
+
+
+def test_ask_stream_emits_steps_thinking_answer_books_done(db_path):
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content))
+        if len(calls) == 1:
+            body = _sse(_chunk(reasoning_content="Think. "), _chunk(content='{"q": "Ahmet"}'))
+        else:
+            body = _sse(_chunk(content="One book "), _chunk(content="matches."))
+        return httpx.Response(200, text=body, headers={"content-type": "text/event-stream"})
+
+    app = create_app(_settings(db_path), llm_transport=httpx.MockTransport(handler))
+    client = TestClient(app)
+    response = client.post("/ask/stream", data={"question": "Ahmet Ümit?"})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+
+    events = []
+    for block in response.text.split("\n\n"):
+        name = next((l[6:].strip() for l in block.split("\n") if l.startswith("event:")), None)
+        if name:
+            events.append(name)
+    assert events[0] == "step"
+    assert "thinking" in events
+    assert "answer" in events
+    assert events.index("books") > events.index("answer")
+    assert events[-1] == "done"
+    assert "Beyoğlu Rapsodisi" in response.text
+
+
+def test_ask_stream_reports_unavailable_server(db_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused", request=request)
+
+    client = TestClient(create_app(_settings(db_path), llm_transport=httpx.MockTransport(handler)))
+    response = client.post("/ask/stream", data={"question": "anything"})
+    assert response.status_code == 200
+    assert "event: error" in response.text
+    assert "event: done" in response.text
+
+
+def test_ask_page_contains_live_panel_and_script(db_path):
+    client = TestClient(create_app(_settings(db_path)))
+    html = client.get("/ask").text
+    assert 'id="ask-live"' in html
+    assert 'data-stream="/ask/stream"' in html
+    assert "/static/ask.js" in html

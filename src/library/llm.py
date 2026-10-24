@@ -144,3 +144,53 @@ def in_library(title: str, author: str | None, books: list[dict]) -> bool:
         if wanted_authors & _author_tokens(book.get("authors")):
             return True
     return False
+
+
+def json_from_text(content: str) -> dict:
+    """Pull the first JSON object out of a model reply, or raise LLMError."""
+    obj = _first_json_object(content) if isinstance(content, str) else None
+    if obj is None:
+        raise LLMError("Yapay zekâ yanıtında geçerli bir JSON nesnesi bulunamadı.")
+    return obj
+
+
+def stream_chat(client: httpx.Client, settings: Settings, system: str, user: str):
+    """Yield ("thinking", text) and ("content", text) pieces as the model writes them."""
+    body: dict = {
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0.2,
+        "stream": True,
+    }
+    if settings.llm_model:
+        body["model"] = settings.llm_model
+    url = settings.llm_url.rstrip("/") + "/chat/completions"
+
+    try:
+        with client.stream("POST", url, json=body) as response:
+            if response.status_code >= 400:
+                raise LLMError(f"Yapay zekâ sunucusu hata döndürdü (HTTP {response.status_code}).")
+            for line in response.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[len("data:"):].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    data = json.loads(payload)
+                except ValueError:
+                    continue
+                choices = data.get("choices") or [{}]
+                delta = choices[0].get("delta") or {}
+                thinking = delta.get("reasoning_content") or delta.get("reasoning")
+                if thinking:
+                    yield ("thinking", thinking)
+                content = delta.get("content")
+                if content:
+                    yield ("content", content)
+    except httpx.TimeoutException as exc:
+        raise LLMError("Yapay zekâ sunucusu zamanında yanıt vermedi.") from exc
+    except httpx.HTTPError as exc:
+        raise LLMError("Yapay zekâ sunucusuna bağlanılamadı. LM Studio açık mı?") from exc

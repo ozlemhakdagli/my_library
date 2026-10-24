@@ -1,3 +1,4 @@
+import json
 import math
 import sqlite3
 import tempfile
@@ -10,7 +11,7 @@ from urllib.parse import urlencode, urlsplit
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -30,6 +31,8 @@ from library.db import (
 )
 from library.i18n import SUPPORTED_LANGS, resolve_lang, translate
 from library.llm import (
+    json_from_text,
+    stream_chat,
     LLMError,
     chat_json,
     in_library,
@@ -235,6 +238,16 @@ def _ask_summary_prompt(language: str) -> str:
         "in the message. If no record answers the question, say that no matching book "
         "was found. Reply with one JSON object and nothing else: {\"answer\": \"...\"}. "
         f"The answer must be at most {ASK_ANSWER_LIMIT} characters. "
+        f"Write the answer in {language}."
+    )
+
+
+def _ask_summary_text_prompt(language: str) -> str:
+    return (
+        "You answer questions about a personal book library. Use ONLY the records given "
+        "in the message. If no record answers the question, say that no matching book "
+        "was found. Reply in plain text, without JSON or markdown. "
+        f"Keep the answer under {ASK_ANSWER_LIMIT} characters. "
         f"Write the answer in {language}."
     )
 
@@ -649,6 +662,77 @@ def create_app(
             request, lang, question=text, asked=True, searched=True,
             error=None if answer else t("ask_error_summary"), answer=answer, books=books,
         )
+
+    def _sse(event: str, payload) -> str:
+        return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+    @app.post("/ask/stream")
+    def ask_stream(
+        request: Request,
+        question: Annotated[str, Form(min_length=1, max_length=ASK_MAX_LENGTH)],
+        lang: str | None = None,
+    ) -> Response:
+        """Same flow as /ask, streamed as server-sent events: steps, model thinking, answer, books."""
+        t = translator(request, lang)
+        text = question.strip()
+        if not text:
+            return Response(status_code=422)
+        active_lang = resolve_lang(lang, request.cookies.get("lang"), settings.default_lang)
+        language = "Turkish" if active_lang == "tr" else "English"
+        client = request.app.state.llm_client
+
+        def events() -> Iterator[str]:
+            yield _sse("step", t("ask_step_understand"))
+            with _open_db(settings) as conn:
+                shelves = db.list_shelves(conn)
+                types = db.list_types(conn)
+            content: list[str] = []
+            try:
+                for kind, piece in stream_chat(client, settings, _ask_filter_prompt(shelves, types), text):
+                    if kind == "thinking":
+                        yield _sse("thinking", piece)
+                    else:
+                        content.append(piece)
+                filter_obj = json_from_text("".join(content))
+            except LLMError:
+                yield _sse("error", t("ask_error_unavailable"))
+                yield _sse("done", None)
+                return
+
+            yield _sse("step", t("ask_step_search"))
+            kwargs = _ask_search_kwargs(parse_filters(filter_obj), shelves, types)
+            with _open_db(settings) as conn:
+                books = db.list_books(conn, **kwargs, limit=ASK_RESULT_LIMIT)
+            yield _sse("step", t("ask_step_found", count=len(books)))
+
+            yield _sse("step", t("ask_step_answer"))
+            answer_parts: list[str] = []
+            try:
+                for kind, piece in stream_chat(
+                    client, settings, _ask_summary_text_prompt(language), _ask_summary_input(text, books)
+                ):
+                    if kind == "thinking":
+                        yield _sse("thinking", piece)
+                    else:
+                        answer_parts.append(piece)
+                        yield _sse("answer", piece)
+            except LLMError:
+                yield _sse("error", t("ask_error_summary"))
+            yield _sse(
+                "books",
+                [
+                    {
+                        "id": book["id"],
+                        "title": book["title"],
+                        "authors": book["authors"],
+                        "status": book["status"],
+                    }
+                    for book in books
+                ],
+            )
+            yield _sse("done", None)
+
+        return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
     def _detail_response(
         request: Request,

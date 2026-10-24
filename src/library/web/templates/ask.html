@@ -1,9 +1,10 @@
 {% extends "base.html" %}
-{% block title %}{{ t("title_ask") }}{% endblock %}
+{% block title %}{{ t("title_ask") }}<script src="/static/ask.js" defer></script>
+{% endblock %}
 {% block content %}
 <h1 class="font-serif">{{ t("title_ask") }}</h1>
 
-<form method="post" action="/ask" hx-post="/ask" hx-target="#ask-result" hx-swap="innerHTML" class="grid gap-3">
+<form method="post" action="/ask" data-stream="/ask/stream" class="grid gap-3">
   <label class="grid gap-1">
     <span>{{ t("ask_label") }}</span>
     <textarea name="question" rows="3" maxlength="500" required placeholder="{{ t('ask_placeholder') }}">{{ question }}</textarea>
@@ -12,7 +13,18 @@
   <div><button type="submit">{{ t("ask_submit") }}</button></div>
 </form>
 
+<section id="ask-live" class="ask-live" hidden aria-live="polite">
+  <ol id="ask-steps" class="ask-steps"></ol>
+  <details id="ask-thinking" class="ask-thinking" open>
+    <summary>{{ t("ask_thinking") }}</summary>
+    <pre id="ask-thinking-text"></pre>
+  </details>
+  <div id="ask-answer" class="ask-answer"></div>
+  <ul id="ask-books" class="ask-books"></ul>
+</section>
+
 <div id="ask-result" class="mt-4">
   {% include "_ask_result.html" %}
 </div>
+<script src="/static/ask.js" defer></script>
 {% endblock %}
