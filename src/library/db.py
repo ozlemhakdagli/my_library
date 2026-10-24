@@ -1124,3 +1124,63 @@ def count_books_by_type(conn: sqlite3.Connection) -> tuple[list[tuple[str, int]]
     ).fetchone()[0]
     total = conn.execute("SELECT COUNT(*) FROM book WHERE deleted_at IS NULL").fetchone()[0]
     return [(row[0], row[1]) for row in rows], untyped, total
+
+
+def books_without_types(conn: sqlite3.Connection) -> list[dict]:
+    """Live books that have no type yet, with their titles and authors."""
+    rows = conn.execute(
+        """
+        SELECT b.id, b.title FROM book b
+        WHERE b.deleted_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM book_type bt WHERE bt.book_id = b.id)
+        ORDER BY b.id
+        """
+    ).fetchall()
+    result = []
+    for row in rows:
+        authors = [
+            a[0]
+            for a in conn.execute(
+                """
+                SELECT a.name FROM book_author ba JOIN author a ON a.id = ba.author_id
+                WHERE ba.book_id = ? ORDER BY ba.position
+                """,
+                (row[0],),
+            ).fetchall()
+        ]
+        result.append({"id": row[0], "title": row[1], "authors": authors})
+    return result
+
+
+def ensure_type(conn: sqlite3.Connection, name: str) -> int:
+    """Return the id of the live type with this name, creating it when missing."""
+    key = norm(name)
+    for row in conn.execute("SELECT id, norm_name FROM type WHERE deleted_at IS NULL").fetchall():
+        if row[1] == key:
+            return row[0]
+    with conn:
+        cursor = conn.execute(
+            "INSERT INTO type (name, norm_name, created_at) VALUES (?, ?, ?)",
+            (name, key, _now()),
+        )
+    return cursor.lastrowid
+
+
+def attach_book_types(conn: sqlite3.Connection, book_id: int, type_ids: list[int]) -> None:
+    """Add types to a book (existing links are kept). One history row per newly added type."""
+    with conn:
+        for type_id in type_ids:
+            exists = conn.execute(
+                "SELECT 1 FROM book_type WHERE book_id = ? AND type_id = ?", (book_id, type_id)
+            ).fetchone()
+            if exists:
+                continue
+            conn.execute("INSERT INTO book_type (book_id, type_id) VALUES (?, ?)", (book_id, type_id))
+            name = conn.execute("SELECT name FROM type WHERE id = ?", (type_id,)).fetchone()[0]
+            conn.execute(
+                """
+                INSERT INTO history (record_type, record_id, field, old_value, new_value, changed_at)
+                VALUES ('book', ?, 'type', NULL, ?, ?)
+                """,
+                (book_id, name, _now()),
+            )

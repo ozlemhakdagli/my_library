@@ -72,22 +72,41 @@
     return node;
   }
 
-  function bookList(container, list) {
-    if (!list.length) return;
-    var ul = document.createElement("ul");
-    ul.className = "assistant-books";
-    list.forEach(function (book) {
-      var li = document.createElement("li");
-      var a = document.createElement("a");
-      a.href = "/books/" + book.id;
-      a.textContent = book.title;
-      var meta = document.createElement("span");
-      meta.textContent = book.authors.join(", ");
-      li.appendChild(a);
-      li.appendChild(meta);
-      ul.appendChild(li);
+  function tableFor(container, data) {
+    var wrap = document.createElement("div");
+    wrap.className = "assistant-table-wrap";
+    var table = document.createElement("table");
+    table.className = "assistant-table";
+    var head = document.createElement("thead");
+    var headRow = document.createElement("tr");
+    data.headers.forEach(function (text) {
+      var th = document.createElement("th");
+      th.scope = "col";
+      th.textContent = text;
+      headRow.appendChild(th);
     });
-    container.appendChild(ul);
+    head.appendChild(headRow);
+    table.appendChild(head);
+    var body = document.createElement("tbody");
+    data.rows.forEach(function (row) {
+      var tr = document.createElement("tr");
+      row.cells.forEach(function (cell, index) {
+        var td = document.createElement("td");
+        if (index === 0 && row.href) {
+          var link = document.createElement("a");
+          link.href = row.href;
+          link.textContent = String(cell);
+          td.appendChild(link);
+        } else {
+          td.textContent = String(cell);
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    table.appendChild(body);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
   }
 
   function handle(block, state) {

@@ -714,6 +714,12 @@ def create_app(
                     rows, untyped, total = db.count_books_by_type(conn)
                 books = []
                 summary_input = _ask_counts_input(text, rows, untyped, total)
+                count_rows = [{"cells": [name, count]} for name, count in rows]
+                count_rows.append({"cells": [t("assistant_no_type"), untyped]})
+                yield _sse(
+                    "table",
+                    {"headers": [t("assistant_col_type"), t("assistant_col_count")], "rows": count_rows},
+                )
             else:
                 yield _sse("step", t("ask_step_search"))
                 kwargs = _ask_search_kwargs(filters, shelves, types)
@@ -735,18 +741,24 @@ def create_app(
                         yield _sse("answer", piece)
             except LLMError:
                 yield _sse("error", t("ask_error_summary"))
-            yield _sse(
-                "books",
-                [
+            if books:
+                yield _sse(
+                    "table",
                     {
-                        "id": book["id"],
-                        "title": book["title"],
-                        "authors": book["authors"],
-                        "status": book["status"],
-                    }
-                    for book in books
-                ],
-            )
+                        "headers": [t("assistant_col_title"), t("assistant_col_author"), t("assistant_col_status")],
+                        "rows": [
+                            {
+                                "href": f"/books/{book['id']}",
+                                "cells": [
+                                    book["title"],
+                                    ", ".join(book["authors"]),
+                                    t(f"status_{book['status']}") if book["status"] else t("status_none"),
+                                ],
+                            }
+                            for book in books
+                        ],
+                    },
+                )
             yield _sse("done", None)
 
         return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})

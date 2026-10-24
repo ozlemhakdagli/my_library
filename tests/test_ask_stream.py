@@ -82,7 +82,7 @@ def test_ask_stream_emits_steps_thinking_answer_books_done(db_path):
     assert events[0] == "step"
     assert "thinking" in events
     assert "answer" in events
-    assert events.index("books") > events.index("answer")
+    assert events.index("table") > events.index("answer")
     assert events[-1] == "done"
     assert "Beyoğlu Rapsodisi" in response.text
 
@@ -159,4 +159,5 @@ def test_types_question_sends_counts_to_the_summary(db_path):
     summary_user_message = calls[1]["messages"][1]["content"]
     assert "Roman: 1" in summary_user_message
     assert "Books per type" in summary_user_message
-    assert "event: books" in response.text
+    assert "event: table" in response.text
+    assert "Books per type" not in response.text
