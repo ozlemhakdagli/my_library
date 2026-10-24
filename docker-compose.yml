@@ -6,6 +6,8 @@ services:
     volumes:
       - library-data:/data
       - ${LIBRARY_RAW_DIR:-./data/raw}:/raw:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
 volumes:

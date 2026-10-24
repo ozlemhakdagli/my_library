@@ -14,12 +14,12 @@ dependencies = [
     "jinja2",
     "python-multipart",
     "pillow",
+    "httpx",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
-    "httpx",
 ]
 
 [tool.setuptools.packages.find]
