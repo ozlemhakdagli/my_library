@@ -53,6 +53,16 @@
   </label>
   <input type="hidden" name="action" value="preview">
   <button type="submit">{{ t("btn_save") }}</button>
+  {% if not values.subtitle or not values.publisher %}
+  <button type="submit" class="border border-accent bg-transparent text-accent"
+          formaction="/books/{{ book.id }}/complete" hx-post="/books/{{ book.id }}/complete"
+          hx-target="#completion-result" hx-swap="outerHTML">{{ t("complete_btn") }}</button>
+  {% endif %}
 </form>
+{% if completion_open is defined and completion_open %}
+{% include "_completion.html" %}
+{% else %}
+<div id="completion-result"></div>
+{% endif %}
 {% endif %}
 {% endblock %}

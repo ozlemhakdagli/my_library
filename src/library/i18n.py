@@ -194,6 +194,21 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "btn_save_dates": "Save dates",
         "date_help": "Format: YYYY-MM-DD, for example 2026-10-17.",
         "book_delete_confirm": "Delete this book? This cannot be undone.",
+        # LLM suggestions (book page) and metadata completion (edit page)
+        "suggest_btn": "Suggest similar books",
+        "suggest_title": "Similar books",
+        "suggest_help": "A local model suggests books. Suggestions are not saved.",
+        "suggest_in_library": "In your library",
+        "suggest_empty": "No suggestions found.",
+        "suggest_error": "Suggestions could not be fetched. Check that the local AI server is running.",
+        "complete_btn": "Get suggestion",
+        "complete_title": "Suggestions for missing fields",
+        "complete_help": "Suggestions use only the title and author. Check them before applying.",
+        "complete_need_title": "Enter a title first.",
+        "complete_empty": "No suggestion was returned.",
+        "complete_error": "Suggestion could not be fetched. Check that the local AI server is running.",
+        "complete_apply": "Apply",
+        "suggestion_tag": "suggestion",
     },
     "tr": {
         # navigation
@@ -388,6 +403,21 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         "btn_save_dates": "Tarihleri kaydet",
         "date_help": "Biçim: YYYY-MM-DD, örneğin 2026-10-17.",
         "book_delete_confirm": "Bu kitap silinsin mi? Bu işlem geri alınamaz.",
+        # LLM suggestions (book page) and metadata completion (edit page)
+        "suggest_btn": "Benzer kitap öner",
+        "suggest_title": "Benzer kitaplar",
+        "suggest_help": "Yerel bir model kitap önerir. Öneriler kaydedilmez.",
+        "suggest_in_library": "Kütüphanende var",
+        "suggest_empty": "Uygun öneri bulunamadı.",
+        "suggest_error": "Öneri alınamadı. Yerel yapay zekâ sunucusunun açık olduğunu kontrol edin.",
+        "complete_btn": "Öneri al",
+        "complete_title": "Eksik alanlar için öneriler",
+        "complete_help": "Öneriler yalnızca başlık ve yazara bakılarak yapılır. Uygulamadan önce kontrol edin.",
+        "complete_need_title": "Önce bir başlık girin.",
+        "complete_empty": "Bir öneri dönmedi.",
+        "complete_error": "Öneri alınamadı. Yerel yapay zekâ sunucusunun açık olduğunu kontrol edin.",
+        "complete_apply": "Uygula",
+        "suggestion_tag": "öneri",
     },
 }
 

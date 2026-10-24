@@ -1,0 +1,29 @@
+<section id="completion-result" class="grid gap-3 rounded-xl border border-line bg-surface p-4" aria-labelledby="completion-title">
+  <h2 id="completion-title">{{ t("complete_title") }}</h2>
+  {% if completion_error %}
+  <p class="text-sm text-warn" role="alert">{{ completion_error }}</p>
+  {% elif offers %}
+  <p class="text-sm text-muted">{{ t("complete_help") }}</p>
+  <form method="post" action="/books/{{ book.id }}/complete/apply" class="grid gap-3">
+    <input type="hidden" name="title" value="{{ values.title }}">
+    <input type="hidden" name="subtitle" value="{{ values.subtitle }}">
+    <input type="hidden" name="authors" value="{{ values.authors }}">
+    <input type="hidden" name="publisher" value="{{ values.publisher }}">
+    <textarea name="note" hidden>{{ values.note }}</textarea>
+    <input type="hidden" name="review_status" value="{{ values.review_status }}">
+    {% for offer in offers %}
+    <input type="hidden" name="suggested_{{ offer.field }}" value="{{ offer.value }}">
+    <label class="flex items-start gap-2">
+      <input type="checkbox" name="apply" value="{{ offer.field }}" checked>
+      <span class="grid gap-0.5">
+        <span class="text-sm text-muted">{{ t(offer.label_key) }} · {{ t("suggestion_tag") }}</span>
+        <span class="font-semibold [overflow-wrap:anywhere]">{{ offer.value }}</span>
+      </span>
+    </label>
+    {% endfor %}
+    <div><button type="submit" class="border border-accent bg-transparent text-accent">{{ t("complete_apply") }}</button></div>
+  </form>
+  {% else %}
+  <p class="text-muted">{{ t("complete_empty") }}</p>
+  {% endif %}
+</section>

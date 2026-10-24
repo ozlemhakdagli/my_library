@@ -74,6 +74,16 @@
       </form>
     </div>
 
+    <section class="grid gap-3 rounded-xl border border-line bg-surface p-4" aria-labelledby="suggest-title">
+      <h2 id="suggest-title" class="font-serif">{{ t("suggest_title") }}</h2>
+      <p class="text-sm text-muted">{{ t("suggest_help") }}</p>
+      <form method="post" action="/books/{{ book.id }}/suggest" hx-post="/books/{{ book.id }}/suggest"
+            hx-target="#suggestions-result" hx-swap="outerHTML">
+        <button type="submit" class="border border-accent bg-transparent text-accent">{{ t("suggest_btn") }}</button>
+      </form>
+      {% include "_suggestions.html" %}
+    </section>
+
     <section class="grid gap-2">
       <h2 class="font-serif">{{ t("loan_history_title") }}</h2>
       {% if loans %}

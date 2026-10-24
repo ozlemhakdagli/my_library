@@ -1,0 +1,20 @@
+<div id="suggestions-result" class="grid gap-3">
+  {% if suggest_error %}
+  <p class="text-sm text-warn" role="alert">{{ suggest_error }}</p>
+  {% elif suggestions is not none %}
+    {% if suggestions %}
+    <ul class="grid gap-2">
+      {% for s in suggestions %}
+      <li class="grid gap-1 rounded-lg border border-line p-3 [overflow-wrap:anywhere]">
+        <span class="font-semibold">{% if s.book_id %}<a href="/books/{{ s.book_id }}" class="text-ink">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</span>
+        {% if s.author %}<span class="text-sm text-muted">{{ s.author }}</span>{% endif %}
+        {% if s.reason %}<span class="text-sm"><span class="text-muted">{{ t("field_reason") }}:</span> {{ s.reason }}</span>{% endif %}
+        {% if s.book_id %}<span class="inline-block w-fit rounded-full border border-accent px-2 py-0.5 text-xs text-accent">{{ t("suggest_in_library") }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted">{{ t("suggest_empty") }}</p>
+    {% endif %}
+  {% endif %}
+</div>

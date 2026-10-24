@@ -29,7 +29,15 @@ from library.db import (
     ReviewError,
 )
 from library.i18n import SUPPORTED_LANGS, resolve_lang, translate
-from library.llm import LLMError, chat_json, make_client, parse_filters
+from library.llm import (
+    LLMError,
+    chat_json,
+    in_library,
+    make_client,
+    parse_completion,
+    parse_filters,
+    parse_suggestions,
+)
 from library.norm import norm
 
 WEB_DIR = Path(__file__).parent
@@ -38,6 +46,7 @@ ASK_MAX_LENGTH = 500
 ASK_RESULT_LIMIT = 20
 ASK_ANSWER_LIMIT = 500
 ASK_PROMPT_NAMES = 50
+SUGGEST_LIMIT = 5
 
 # Editable form fields and the label key shown for each in change summaries.
 EDITABLE_FIELDS = (
@@ -266,6 +275,47 @@ def _ask_search_kwargs(filters: dict, shelves: list[dict], types: list[dict]) ->
     if type_ids:
         kwargs["type_ids"] = type_ids
     return kwargs
+
+
+def _suggest_prompt(language: str) -> str:
+    return (
+        "You suggest books similar to a book in a personal library. Use the title, authors, "
+        "types and publisher you are given. Suggest only real books you are confident exist; "
+        "never invent a title or author. Reply with one JSON object and nothing else: "
+        '{"suggestions": [{"title": "...", "author": "...", "reason": "..."}]}. '
+        f"Give at most {SUGGEST_LIMIT} suggestions with short reasons. "
+        f"Write the reasons in {language}."
+    )
+
+
+def _suggest_input(book: dict, type_names: list[str]) -> str:
+    return "\n".join(
+        [
+            f"Title: {book['title']}",
+            f"Authors: {', '.join(book['authors']) or '-'}",
+            f"Types: {', '.join(type_names) or '-'}",
+            f"Publisher: {book['publisher'] or '-'}",
+        ]
+    )
+
+
+def _complete_prompt() -> str:
+    return (
+        "You complete missing metadata for a book, using ONLY the title and the author given. "
+        "Suggest a subtitle and a publisher only when you are sure of them. "
+        "Never invent a value: if you are not sure, return an empty string for that field. "
+        'Reply with one JSON object and nothing else: {"subtitle": "...", "publisher": "..."}.'
+    )
+
+
+def _completion_offers(values: dict, suggestion: dict) -> list[dict]:
+    """Suggested values for blank fields only; filled fields are never offered."""
+    offers = []
+    if not values["subtitle"].strip() and suggestion["subtitle"]:
+        offers.append({"field": "subtitle", "label_key": "field_subtitle", "value": suggestion["subtitle"]})
+    if not values["publisher"].strip() and suggestion["publisher"]:
+        offers.append({"field": "publisher", "label_key": "field_publisher", "value": suggestion["publisher"]})
+    return offers
 
 
 def create_app(
@@ -606,6 +656,8 @@ def create_app(
         lang: str | None,
         status_code: int = 200,
         cover_error: str | None = None,
+        suggestions: list[dict] | None = None,
+        suggest_error: str | None = None,
     ) -> HTMLResponse:
         with _open_db(settings) as conn:
             book = db.get_book(conn, book_id)
@@ -629,12 +681,158 @@ def create_app(
             photos=photos,
             loans=loans,
             cover_error=cover_error,
+            suggestions=suggestions,
+            suggest_error=suggest_error,
             **assignments,
         )
 
     @app.get("/books/{book_id}", response_class=HTMLResponse)
     def book_detail(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:
         return _detail_response(request, book_id, lang)
+
+    def _llm_language(request: Request, lang: str | None) -> str:
+        active_lang = resolve_lang(lang, request.cookies.get("lang"), settings.default_lang)
+        return "Turkish" if active_lang == "tr" else "English"
+
+    @app.post("/books/{book_id}/suggest", response_class=HTMLResponse, response_model=None)
+    def book_suggest(request: Request, book_id: int, lang: str | None = None) -> HTMLResponse:
+        """Ask the local model for similar books. Nothing is saved; library matches are only linked."""
+        t = translator(request, lang)
+        with _open_db(settings) as conn:
+            book = db.get_book(conn, book_id)
+            if book is None:
+                raise HTTPException(status_code=404)
+            type_names = [chip["name"] for chip in db.get_book_shelf_and_types(conn, book_id)["chips"]]
+            library = [b for b in db.list_books(conn, limit=db.count_books(conn)) if b["id"] != book_id]
+        try:
+            obj = chat_json(
+                request.app.state.llm_client,
+                settings,
+                _suggest_prompt(_llm_language(request, lang)),
+                _suggest_input(book, type_names),
+            )
+        except LLMError:
+            suggestions, error = None, t("suggest_error")
+        else:
+            suggestions, error = [], None
+            for item in parse_suggestions(obj, limit=SUGGEST_LIMIT):
+                match = next((b for b in library if in_library(item["title"], item["author"], [b])), None)
+                suggestions.append({**item, "book_id": match["id"] if match else None})
+
+        if "HX-Request" in request.headers:
+            response = render(
+                request,
+                "_suggestions.html",
+                lang,
+                book_id=book_id,
+                suggestions=suggestions,
+                suggest_error=error,
+            )
+            response.headers["Vary"] = "HX-Request"
+            return response
+        return _detail_response(
+            request, book_id, lang, suggestions=suggestions, suggest_error=error
+        )
+
+    def _complete_values(
+        title: str, subtitle: str, authors: str, publisher: str, note: str, review_status: str
+    ) -> dict:
+        return {
+            "title": title,
+            "subtitle": subtitle,
+            "authors": authors,
+            "publisher": publisher,
+            "note": note,
+            "review_status": review_status,
+        }
+
+    @app.post("/books/{book_id}/complete", response_class=HTMLResponse, response_model=None)
+    def book_complete(
+        request: Request,
+        book_id: int,
+        title: Annotated[str, Form()] = "",
+        subtitle: Annotated[str, Form()] = "",
+        authors: Annotated[str, Form()] = "",
+        publisher: Annotated[str, Form()] = "",
+        note: Annotated[str, Form()] = "",
+        review_status: Annotated[str, Form()] = "ok",
+        lang: str | None = None,
+    ) -> HTMLResponse:
+        """Suggest a subtitle and publisher from the title and author. The book is not changed."""
+        t = translator(request, lang)
+        with _open_db(settings) as conn:
+            book = db.get_book(conn, book_id)
+        if book is None:
+            raise HTTPException(status_code=404)
+        values = _complete_values(title, subtitle, authors, publisher, note, review_status)
+
+        offers: list[dict] = []
+        error: str | None = None
+        if not title.strip():
+            error = t("complete_need_title")
+        else:
+            try:
+                obj = chat_json(
+                    request.app.state.llm_client,
+                    settings,
+                    _complete_prompt(),
+                    f"Title: {title.strip()}\nAuthors: {authors.strip() or '-'}",
+                )
+            except LLMError:
+                error = t("complete_error")
+            else:
+                offers = _completion_offers(values, parse_completion(obj))
+
+        if "HX-Request" in request.headers:
+            response = render(
+                request,
+                "_completion.html",
+                lang,
+                book=book,
+                values=values,
+                offers=offers,
+                completion_error=error,
+            )
+            response.headers["Vary"] = "HX-Request"
+            return response
+        return render(
+            request,
+            "edit.html",
+            lang,
+            book=book,
+            values=values,
+            preview=None,
+            completion_open=True,
+            offers=offers,
+            completion_error=error,
+        )
+
+    @app.post("/books/{book_id}/complete/apply", response_class=HTMLResponse, response_model=None)
+    def book_complete_apply(
+        request: Request,
+        book_id: int,
+        title: Annotated[str, Form()] = "",
+        subtitle: Annotated[str, Form()] = "",
+        authors: Annotated[str, Form()] = "",
+        publisher: Annotated[str, Form()] = "",
+        note: Annotated[str, Form()] = "",
+        review_status: Annotated[str, Form()] = "ok",
+        suggested_subtitle: Annotated[str, Form()] = "",
+        suggested_publisher: Annotated[str, Form()] = "",
+        apply: Annotated[list[str], Form()] = [],
+        lang: str | None = None,
+    ) -> HTMLResponse:
+        """Copy the checked suggestions into the form fields. Nothing is saved; /edit does that."""
+        with _open_db(settings) as conn:
+            book = db.get_book(conn, book_id)
+        if book is None:
+            raise HTTPException(status_code=404)
+        values = _complete_values(title, subtitle, authors, publisher, note, review_status)
+        if "subtitle" in apply and suggested_subtitle.strip():
+            values["subtitle"] = suggested_subtitle.strip()[:300]
+        if "publisher" in apply and suggested_publisher.strip():
+            values["publisher"] = suggested_publisher.strip()[:200]
+        return render(request, "edit.html", lang, book=book, values=values, preview=None)
 
     @app.post("/books/{book_id}/cover", response_model=None)
     def book_cover_replace(
