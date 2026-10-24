@@ -1,0 +1,24 @@
+<section class="grid gap-3">
+  {% if error %}<p class="text-sm text-warn" role="alert">{{ error }}</p>{% endif %}
+  {% if answer %}
+  <div class="grid gap-1 rounded-xl border border-line bg-surface p-4">
+    <h2>{{ t("ask_answer_title") }}</h2>
+    <p class="whitespace-pre-line">{{ answer }}</p>
+  </div>
+  {% endif %}
+  {% if searched %}
+    <p class="font-serif text-lg text-muted">{{ t("ask_results_count", count=books | length) }}</p>
+    {% if books %}
+    <ul class="grid gap-2">
+      {% for book in books %}
+      <li class="rounded-xl border border-line bg-surface p-3">
+        <a href="/books/{{ book.id }}" class="font-semibold text-ink">{{ book.title }}</a>
+        <span class="block text-sm text-muted">{{ book.authors | join(", ") }}{% if book.status %} · {{ t("status_" ~ book.status) }}{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted">{{ t("ask_no_results") }}</p>
+    {% endif %}
+  {% endif %}
+</section>

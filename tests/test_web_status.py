@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -172,7 +172,11 @@ def test_finished_before_started_rejected_by_db(db_path, book_id):
 def test_detail_form_future_date_is_400_and_unchanged(client, db_path, book_id):
     response = client.post(
         f"/books/{book_id}/status",
-        data={"status": "read", "started_on": "", "finished_on": "2026-10-18"},
+        data={
+            "status": "read",
+            "started_on": "",
+            "finished_on": (date.today() + timedelta(days=30)).isoformat(),
+        },
     )
     assert response.status_code == 400
     assert _reading_row(db_path, book_id) is None

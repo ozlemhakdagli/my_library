@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import urlencode, urlsplit
 
+import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -28,10 +29,15 @@ from library.db import (
     ReviewError,
 )
 from library.i18n import SUPPORTED_LANGS, resolve_lang, translate
+from library.llm import LLMError, chat_json, make_client, parse_filters
 from library.norm import norm
 
 WEB_DIR = Path(__file__).parent
 PAGE_SIZE = 50
+ASK_MAX_LENGTH = 500
+ASK_RESULT_LIMIT = 20
+ASK_ANSWER_LIMIT = 500
+ASK_PROMPT_NAMES = 50
 
 # Editable form fields and the label key shown for each in change summaries.
 EDITABLE_FIELDS = (
@@ -198,8 +204,74 @@ def _check_cover(photo: bytes | None) -> None:
 QUICK_STATUS_ACTIONS = {"read": "read", "reading": "reading", "abandon": "abandoned"}
 
 
+def _ask_filter_prompt(shelves: list[dict], types: list[dict]) -> str:
+    shelf_names = ", ".join(s["name"] for s in shelves[:ASK_PROMPT_NAMES]) or "none"
+    type_names = ", ".join(t["name"] for t in types[:ASK_PROMPT_NAMES]) or "none"
+    return (
+        "You turn a question about a personal book library into search filters. "
+        "Reply with one JSON object and nothing else. Keys: "
+        'q (string: title or author words to search, "" if none), '
+        "shelf (string: a shelf name, or null), "
+        "type (array of type names, [] if none), "
+        'status (one of "unread", "reading", "read", "abandoned", or null), '
+        "needs_review (boolean). "
+        f"Known shelves: {shelf_names}. Known types: {type_names}. "
+        "Use a known name exactly when it matches."
+    )
+
+
+def _ask_summary_prompt(language: str) -> str:
+    return (
+        "You answer questions about a personal book library. Use ONLY the records given "
+        "in the message. If no record answers the question, say that no matching book "
+        "was found. Reply with one JSON object and nothing else: {\"answer\": \"...\"}. "
+        f"The answer must be at most {ASK_ANSWER_LIMIT} characters. "
+        f"Write the answer in {language}."
+    )
+
+
+def _ask_summary_input(question: str, books: list[dict]) -> str:
+    lines = [f"Question: {question}", "Records:"]
+    if not books:
+        lines.append("(none)")
+    for book in books:
+        authors = ", ".join(book["authors"]) or "-"
+        lines.append(f"- title: {book['title']} | authors: {authors} | status: {book['status'] or 'none'}")
+    return "\n".join(lines)
+
+
+def _ask_answer(obj: dict) -> str | None:
+    value = obj.get("answer")
+    if not isinstance(value, str):
+        return None
+    return value.strip()[:ASK_ANSWER_LIMIT] or None
+
+
+def _ask_search_kwargs(filters: dict, shelves: list[dict], types: list[dict]) -> dict:
+    """Map model filters to the normal search arguments. Unknown shelf or type names are dropped."""
+    kwargs: dict = {
+        "query": filters.get("q", ""),
+        "status": filters.get("status"),
+        "needs_review": filters.get("needs_review", False),
+    }
+    if filters.get("shelf"):
+        shelf = next((s for s in shelves if norm(s["name"]) == norm(filters["shelf"])), None)
+        if shelf is not None:
+            kwargs["shelf_id"] = shelf["id"]
+    type_ids: list[int] = []
+    for wanted in filters.get("type", []):
+        match = next((t for t in types if norm(t["name"]) == norm(wanted)), None)
+        if match is not None and match["id"] not in type_ids:
+            type_ids.append(match["id"])
+    if type_ids:
+        kwargs["type_ids"] = type_ids
+    return kwargs
+
+
 def create_app(
-    settings: Settings | None = None, today_fn: Callable[[], date] = date.today
+    settings: Settings | None = None,
+    today_fn: Callable[[], date] = date.today,
+    llm_transport: httpx.BaseTransport | None = None,
 ) -> FastAPI:
     if settings is None:
         settings = Settings.from_env()
@@ -208,6 +280,7 @@ def create_app(
 
     app = FastAPI(title="Personal Library")
     app.state.settings = settings
+    app.state.llm_client = make_client(settings, transport=llm_transport)
     app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
 
     @app.get("/health")
@@ -464,6 +537,67 @@ def create_app(
             values=values,
             cover_error=None,
             ocr_note=t(note_key),
+        )
+
+    def _ask_response(
+        request: Request, lang: str | None, status_code: int = 200, **context: object
+    ) -> HTMLResponse:
+        # HTMX asks get only the result fragment; plain requests get the whole page.
+        name = "_ask_result.html" if "HX-Request" in request.headers else "ask.html"
+        response = render(request, name, lang, status_code=status_code, **context)
+        response.headers["Vary"] = "HX-Request"
+        return response
+
+    @app.get("/ask", response_class=HTMLResponse)
+    def ask_page(request: Request, lang: str | None = None) -> HTMLResponse:
+        return _ask_response(
+            request, lang, question="", asked=False, searched=False, error=None, answer=None, books=[]
+        )
+
+    @app.post("/ask", response_class=HTMLResponse, response_model=None)
+    def ask_submit(
+        request: Request,
+        question: Annotated[str, Form(min_length=1, max_length=ASK_MAX_LENGTH)],
+        lang: str | None = None,
+    ) -> HTMLResponse:
+        """Turn a question into filters, run the normal search, then summarise the records.
+
+        Model output is only used for searching and for display; nothing is written.
+        """
+        t = translator(request, lang)
+        text = question.strip()
+        if not text:
+            return _ask_response(
+                request, lang, status_code=422, question="", asked=False, searched=False,
+                error=t("ask_empty"), answer=None, books=[],
+            )
+        active_lang = resolve_lang(lang, request.cookies.get("lang"), settings.default_lang)
+        language = "Turkish" if active_lang == "tr" else "English"
+        client = request.app.state.llm_client
+
+        with _open_db(settings) as conn:
+            shelves = db.list_shelves(conn)
+            types = db.list_types(conn)
+        try:
+            filter_obj = chat_json(client, settings, _ask_filter_prompt(shelves, types), text)
+        except LLMError:
+            return _ask_response(
+                request, lang, question=text, asked=True, searched=False,
+                error=t("ask_error_unavailable"), answer=None, books=[],
+            )
+
+        kwargs = _ask_search_kwargs(parse_filters(filter_obj), shelves, types)
+        with _open_db(settings) as conn:
+            books = db.list_books(conn, **kwargs, limit=ASK_RESULT_LIMIT)
+
+        try:
+            summary = chat_json(client, settings, _ask_summary_prompt(language), _ask_summary_input(text, books))
+            answer = _ask_answer(summary)
+        except LLMError:
+            answer = None
+        return _ask_response(
+            request, lang, question=text, asked=True, searched=True,
+            error=None if answer else t("ask_error_summary"), answer=answer, books=books,
         )
 
     def _detail_response(

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ t("title_ask") }}{% endblock %}
+{% block content %}
+<h1 class="font-serif">{{ t("title_ask") }}</h1>
+
+<form method="post" action="/ask" hx-post="/ask" hx-target="#ask-result" hx-swap="innerHTML" class="grid gap-3">
+  <label class="grid gap-1">
+    <span>{{ t("ask_label") }}</span>
+    <textarea name="question" rows="3" maxlength="500" required placeholder="{{ t('ask_placeholder') }}">{{ question }}</textarea>
+  </label>
+  <p class="text-sm text-muted">{{ t("ask_help") }}</p>
+  <div><button type="submit">{{ t("ask_submit") }}</button></div>
+</form>
+
+<div id="ask-result" class="mt-4">
+  {% include "_ask_result.html" %}
+</div>
+{% endblock %}

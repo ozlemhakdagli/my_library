@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -124,7 +124,11 @@ def test_quick_start_reading_after_finish_is_200(client, db_path, book_id):
 def test_detail_form_reading_keeps_future_date_rule(client, db_path, book_id):
     response = client.post(
         f"/books/{book_id}/status",
-        data={"status": "reading", "started_on": "2026-10-18", "finished_on": ""},
+        data={
+            "status": "reading",
+            "started_on": (date.today() + timedelta(days=30)).isoformat(),
+            "finished_on": "",
+        },
     )
     assert response.status_code == 400
     assert _reading_row(db_path, book_id) is None
