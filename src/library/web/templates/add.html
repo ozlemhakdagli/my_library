@@ -2,9 +2,9 @@
 {% from "_cover_dropzone.html" import dropzone %}
 {% block title %}{{ t("btn_add") }}{% endblock %}
 {% block content %}
-<h1 class="font-serif">{{ t("btn_add") }}</h1>
+<h1>{{ t("btn_add") }}</h1>
 
-<form id="book-form" class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/new" enctype="multipart/form-data">
+<form id="book-form" class="panel grid gap-3" method="post" action="/books/new" enctype="multipart/form-data">
   {# Only this block is replaced by the photo suggestion; the file input outside it keeps its selection. #}
   <div id="book-fields" class="grid gap-3">
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
@@ -31,19 +31,19 @@
       <input type="checkbox" name="review_status" value="needs review" {% if values.review_status == "needs review" %}checked{% endif %}>
       <span>{{ t("needs_review") }}</span>
     </label>
-    {% if ocr_note %}<p class="text-sm text-muted" role="status">{{ ocr_note }}</p>{% endif %}
+    {% if ocr_note %}<p class="meta" role="status">{{ ocr_note }}</p>{% endif %}
     {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
   </div>
-  <div class="grid gap-1 text-sm text-muted">
+  <div class="grid gap-1 meta">
     <span>{{ t("field_cover") }}</span>
     {{ dropzone(t, t("cover_drop_text")) }}
   </div>
-  <p id="cover-help" class="text-sm text-muted">{{ t("cover_help") }}</p>
+  <p id="cover-help" class="meta">{{ t("cover_help") }}</p>
   <div class="flex flex-wrap gap-2">
-    <button type="button" id="ocr-button" disabled
+    <button type="button" id="ocr-button" disabled class="btn-secondary"
             hx-post="/books/ocr" hx-encoding="multipart/form-data"
             hx-target="#book-fields" hx-select="#book-fields" hx-swap="outerHTML">{{ t("btn_ocr_fill") }}</button>
-    <button type="submit">{{ t("btn_add") }}</button>
+    <button type="submit" class="btn-primary">{{ t("btn_add") }}</button>
   </div>
 </form>
 <script>

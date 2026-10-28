@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
-<h1 class="font-serif">{{ book.title }}</h1>
+<h1>{{ book.title }}</h1>
 
 {% if preview is not none %}
 <table class="w-full border-collapse text-left text-sm [&_td]:py-1 [&_td]:pr-3 [&_td]:align-top [&_th]:py-1 [&_th]:pr-3 [&_th]:font-semibold">
@@ -15,7 +15,7 @@
   {% endfor %}
   </tbody>
 </table>
-<form class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/{{ book.id }}/edit">
+<form class="panel grid gap-3" method="post" action="/books/{{ book.id }}/edit">
   <input type="hidden" name="title" value="{{ values.title }}">
   <input type="hidden" name="subtitle" value="{{ values.subtitle }}">
   <input type="hidden" name="authors" value="{{ values.authors }}">
@@ -23,10 +23,10 @@
   <input type="hidden" name="note" value="{{ values.note }}">
   <input type="hidden" name="review_status" value="{{ values.review_status }}">
   <input type="hidden" name="action" value="save">
-  <button type="submit">{{ t("btn_save") }}</button>
+  <button type="submit" class="btn-primary">{{ t("btn_save") }}</button>
 </form>
 {% else %}
-<form class="grid gap-3 rounded-xl border border-line bg-surface p-4" method="post" action="/books/{{ book.id }}/edit">
+<form class="panel grid gap-3" method="post" action="/books/{{ book.id }}/edit">
   <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
     <span>{{ t("field_title") }}</span>
     <input type="text" name="title" value="{{ values.title }}" maxlength="300" required>
@@ -52,9 +52,9 @@
     <span>{{ t("needs_review") }}</span>
   </label>
   <input type="hidden" name="action" value="preview">
-  <button type="submit">{{ t("btn_save") }}</button>
+  <button type="submit" class="btn-primary">{{ t("btn_save") }}</button>
   {% if not values.subtitle or not values.publisher %}
-  <button type="submit" class="border border-accent bg-transparent text-accent"
+  <button type="submit" class="btn-secondary"
           formaction="/books/{{ book.id }}/complete" hx-post="/books/{{ book.id }}/complete"
           hx-target="#completion-result" hx-swap="outerHTML">{{ t("complete_btn") }}</button>
   {% endif %}

@@ -105,10 +105,18 @@ def test_detail_edit_and_delete_buttons(db_path, ids):
 @pytest.mark.parametrize("lang", ["en", "tr"])
 def test_secondary_pages_return_200_with_serif_title(db_path, lang):
     client = _client(db_path, lang)
+    # Pages migrated to the editorial redesign (2026-10-28) rely on the bare <h1> rule
+    # in tailwind.input.css for the serif title (no class needed); pages not yet
+    # migrated still carry the pre-redesign font-serif class. Move a path here as its
+    # own task migrates it.
+    bare_h1_paths = {"/books/new"}
     for path in ("/loans", "/review", "/shelves", "/types", "/reading", "/settings", "/books/new"):
         response = client.get(path, params={"lang": lang})
         assert response.status_code == 200, path
-        assert re.search(r'<h1 class="font-serif"', response.text), path
+        if path in bare_h1_paths:
+            assert re.search(r"<h1>", response.text), path
+        else:
+            assert re.search(r'<h1 class="font-serif"', response.text), path
 
 
 def test_templates_have_no_hardcoded_hex_colours_except_documented_cover_ink():
