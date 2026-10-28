@@ -20,6 +20,7 @@
   --muted: #6b645a;
   --line: #e4ddd2;
   --accent: #8a3b1f;
+  --accent-soft: #f1e3da;
   --danger: #9a2b1b;
   --warn: #8a5a00;
   --warn-bg: #fff3d6;
@@ -37,6 +38,7 @@
     --muted: #a39a8c;
     --line: #2e2a24;
     --accent: #d9825b;
+    --accent-soft: #3a2a22;
     --danger: #e8836f;
     --warn: #f2c26b;
     --warn-bg: #3a3122;
@@ -51,6 +53,7 @@
   --muted: #a39a8c;
   --line: #2e2a24;
   --accent: #d9825b;
+  --accent-soft: #3a2a22;
   --danger: #e8836f;
   --warn: #f2c26b;
   --warn-bg: #3a3122;
@@ -64,6 +67,7 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
   --color-danger: var(--danger);
   --color-warn: var(--warn);
@@ -83,19 +87,15 @@
     color: var(--accent);
   }
 
-  /* Page titles and section titles use the serif stack (spec 6). */
-  h1,
+  /* h1 size/weight/family now come from the plain .title, h1 rule near the end of this
+     file (2026-10-28 editorial redesign), which wins by cascade order over this layer.
+     h2 keeps its own serif heading style here: section headings that have moved to
+     .eyebrow no longer use h2, but a few fragments outside this redesign's scope
+     (_completion.html, _ask_result.html, _assistant.html) still render a real <h2> and
+     rely on this rule. */
   h2 {
     font-family: ui-serif, Georgia, serif;
     line-height: 1.2;
-  }
-
-  h1 {
-    font-size: 1.75rem;
-    font-weight: 600;
-  }
-
-  h2 {
     font-size: 1.25rem;
     font-weight: 600;
   }
@@ -241,3 +241,15 @@ dialog.history-dialog::backdrop { background: rgba(0,0,0,.4); }
   color: inherit;
   border-radius: 0;
 }
+
+/* Editorial redesign (2026-10-28): shared component vocabulary used on every page.
+   See docs/superpowers/specs/2026-10-28-editorial-redesign-design.md. */
+.title, h1 { font-family: ui-serif, Georgia, serif; font-size: 2rem; font-weight: 600; line-height: 1.15; color: var(--ink); }
+.eyebrow { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; color: var(--muted); }
+.meta { font-size: .875rem; color: var(--muted); }
+.panel { border-radius: .75rem; border: 1px solid var(--line); background: var(--surface); padding: 1rem; }
+.section { border-top: 1px solid var(--line); padding-top: 1rem; }
+.btn-primary, .btn-secondary { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1.25rem; border-radius: .5rem; font: inherit; cursor: pointer; }
+.btn-primary { background: var(--accent); color: var(--bg); border: 0; }
+.btn-secondary { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.badge { display: inline-flex; align-items: center; padding: .15rem .6rem; border-radius: 999px; font-size: .75rem; background: var(--accent-soft); color: var(--accent); }
