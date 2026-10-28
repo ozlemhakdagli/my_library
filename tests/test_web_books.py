@@ -240,15 +240,16 @@ def test_detail_shows_change_history_in_english(client, db_path):
     assert "Eski Ad → Yeni Ad" in text
 
 
-def test_change_history_is_collapsed_by_default(client, db_path):
-    # The history list is inside a <details> element and starts closed (no "open" attribute),
-    # so it only shows once the reader clicks the "Change history" heading.
+def test_change_history_opens_in_a_popup(client, db_path):
+    # The history list lives in a <dialog>, opened by a button; it is not visible on
+    # page load (no "open" attribute) until the reader clicks "Change history".
     book_id = seed_detailed_book(db_path)
     text = client.get(f"/books/{book_id}").text
-    start = text.index("Change history")
-    details_start = text.rindex("<details", 0, start)
-    tag = text[details_start : text.index(">", details_start)]
+    assert 'data-dialog-open="history-dialog"' in text
+    dialog_start = text.index('<dialog id="history-dialog"')
+    tag = text[dialog_start : text.index(">", dialog_start)]
     assert "open" not in tag
+    assert "Eski Ad → Yeni Ad" in text
 
 
 def test_detail_shows_change_history_in_turkish(client, db_path):
