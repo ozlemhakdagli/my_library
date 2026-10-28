@@ -41,3 +41,9 @@ def test_home_page_add_button_text_in_english(client):
 def test_books_new_page_opens(client):
     response = client.get("/books/new")
     assert response.status_code == 200
+
+
+def test_add_book_is_not_a_nav_tab(client):
+    response = client.get("/")
+    nav = response.text.split("<nav", 1)[1].split("</nav>", 1)[0]
+    assert 'href="/books/new"' not in nav

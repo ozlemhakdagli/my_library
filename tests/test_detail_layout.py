@@ -127,3 +127,20 @@ def test_cover_ink_token_is_documented_in_css():
     css = (WEB / "static" / "tailwind.input.css").read_text(encoding="utf-8")
     assert "--cover-ink: #faf6ee;" in css
     assert "Fixed on purpose" in css
+
+
+def test_date_fields_use_the_date_picker(db_path, ids):
+    book_id = ids["Kırmızı Kitap"]
+    _set_status(db_path, book_id, "reading")
+    html = _client(db_path).get(f"/books/{book_id}").text
+    assert re.search(r'type="date" name="started_on"', html)
+    assert 'type="text" name="started_on"' not in html
+    loans = _client(db_path).get("/loans").text
+    assert re.search(r'type="date" name="lent_on"', loans)
+
+
+def test_reading_dates_have_no_format_hint(db_path, ids):
+    book_id = ids["Kırmızı Kitap"]
+    _set_status(db_path, book_id, "reading")
+    html = _client(db_path).get(f"/books/{book_id}").text
+    assert "YYYY-MM-DD" not in html

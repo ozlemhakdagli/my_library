@@ -222,5 +222,5 @@ def test_real_data_review_queue_has_78_items(tmp_path):
     )
     first = client.get("/review")
     second = client.get("/review?page=2")
-    assert len(re.findall(r'data-review-id="\d+"', first.text)) == 50
-    assert len(re.findall(r'data-review-id="\d+"', second.text)) == 28
+    assert len(re.findall(r'data-review-id="\d+"', first.text)) == 10
+    assert len(re.findall(r'data-review-id="\d+"', second.text)) == 10

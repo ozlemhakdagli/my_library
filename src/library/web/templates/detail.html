@@ -3,7 +3,7 @@
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
 <div class="grid gap-6 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
-  <div class="mx-auto grid w-full max-w-60 gap-3 md:mx-0">
+  <div class="mx-auto grid w-full max-w-60 content-start gap-3 md:mx-0">
     {% include "_cover.html" %}
     <form method="post" action="/books/{{ book.id }}/cover" enctype="multipart/form-data" class="grid gap-2">
       <div class="grid gap-1 meta">

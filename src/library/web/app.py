@@ -44,7 +44,8 @@ from library.llm import (
 from library.norm import norm
 
 WEB_DIR = Path(__file__).parent
-PAGE_SIZE = 50
+PAGE_SIZE = 15
+REVIEW_PAGE_SIZE = 10
 ASK_MAX_LENGTH = 500
 ASK_RESULT_LIMIT = 20
 ASK_ANSWER_LIMIT = 500
@@ -174,6 +175,7 @@ def _open_db(settings: Settings) -> Iterator:
     conn = db.connect(settings.db_path)
     try:
         db.init_schema(conn)
+        db.seed_default_types(conn)
         yield conn
     finally:
         conn.close()
@@ -1341,12 +1343,12 @@ def create_app(
         with _open_db(settings) as conn:
             # One extra row tells whether a next page exists.
             rows = db.list_review_items(
-                conn, limit=PAGE_SIZE + 1, offset=(page - 1) * PAGE_SIZE
+                conn, limit=REVIEW_PAGE_SIZE + 1, offset=(page - 1) * REVIEW_PAGE_SIZE
             )
-        has_next = len(rows) > PAGE_SIZE
+        has_next = len(rows) > REVIEW_PAGE_SIZE
         items = [
             {**row, "reason_label": reason_label(row["reason"], t)}
-            for row in rows[:PAGE_SIZE]
+            for row in rows[:REVIEW_PAGE_SIZE]
         ]
         return render(
             request,

@@ -90,7 +90,7 @@ def test_ask_never_writes_model_output_to_database(db_path):
     conn = db.connect(db_path)
     try:
         assert conn.execute("SELECT COUNT(*) FROM shelf").fetchone()[0] == 0
-        assert conn.execute("SELECT COUNT(*) FROM type").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM type").fetchone()[0] == len(db.DEFAULT_TYPES)
     finally:
         conn.close()
 

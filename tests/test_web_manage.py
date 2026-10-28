@@ -168,7 +168,7 @@ def test_create_type_and_duplicate_is_409(client, db_path):
     response = client.post("/types", data={"name": "sesli"})
     assert response.status_code == 409
     assert "A type with this name already exists." in response.text
-    assert _count(db_path, "type") == 1
+    assert _count(db_path, "type") == len(db.DEFAULT_TYPES) + 1
 
 
 def test_rename_and_delete_type(client, db_path):
@@ -194,7 +194,7 @@ def test_type_page_shows_book_counts(client, db_path):
 def test_empty_type_name_is_422(client, db_path):
     response = client.post("/types", data={"name": ""})
     assert response.status_code == 422
-    assert _count(db_path, "type") == 0
+    assert _count(db_path, "type") == len(db.DEFAULT_TYPES)
 
 
 def test_nav_links_to_shelves_and_types(client):

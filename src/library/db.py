@@ -120,6 +120,22 @@ def connect(path: str) -> sqlite3.Connection:
     return conn
 
 
+DEFAULT_TYPES = (
+    "Roman",
+    "Öykü",
+    "Şiir",
+    "Deneme",
+    "Tarih",
+    "Felsefe",
+    "Bilim",
+    "Psikoloji",
+    "Ekonomi",
+    "Sanat",
+    "Biyografi",
+    "Çocuk ve Gençlik",
+)
+
+
 def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
     existing = {r["name"] for r in conn.execute("PRAGMA table_info(review_item)")}
@@ -127,6 +143,13 @@ def init_schema(conn: sqlite3.Connection) -> None:
         if column not in existing:
             conn.execute(f"ALTER TABLE review_item ADD COLUMN {column} TEXT")
     conn.commit()
+
+
+def seed_default_types(conn: sqlite3.Connection) -> None:
+    """Add DEFAULT_TYPES only when the type table has never had a row, so deleted defaults stay deleted."""
+    if conn.execute("SELECT COUNT(*) FROM type").fetchone()[0] == 0:
+        for name in DEFAULT_TYPES:
+            add_type(conn, name)
 
 
 REVIEW_STATUSES = ("ok", "needs review")

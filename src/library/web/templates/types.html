@@ -21,16 +21,18 @@
 {% if items %}
 <ul class="divide-y divide-line">
   {% for item in items %}
-  <li class="py-3 [overflow-wrap:anywhere]">
-    <div class="font-semibold">{{ item.name }}</div>
-    <div class="flex flex-wrap gap-x-3 meta"><span>{{ t("manage_book_count", count=item.book_count) }}</span></div>
-    <div class="mt-2 flex flex-wrap items-center gap-3">
+  <li class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3 [overflow-wrap:anywhere]">
+    <div class="min-w-0">
+      <div class="font-semibold">{{ item.name }}</div>
+      <div class="meta">{{ t("manage_book_count", count=item.book_count) }}</div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
       <form method="post" action="/types/{{ item.id }}/rename?lang={{ lang }}" class="flex items-center gap-2">
-        <input type="text" name="name" value="{{ item.name }}" maxlength="200" required aria-label="{{ t('manage_name') }}">
+        <input type="text" name="name" value="{{ item.name }}" maxlength="200" required aria-label="{{ t('manage_name') }}" class="w-48">
         <button type="submit" class="btn-secondary">{{ t("btn_rename") }}</button>
       </form>
       <form method="post" action="/types/{{ item.id }}/delete?lang={{ lang }}" onsubmit='return confirm({{ t("manage_confirm_delete_type")|tojson }});'>
-        <button type="submit" class="btn-secondary">{{ t("btn_delete") }}</button>
+        <button type="submit" class="btn-secondary !text-danger">{{ t("btn_delete") }}</button>
       </form>
     </div>
   </li>

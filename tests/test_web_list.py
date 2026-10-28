@@ -68,17 +68,17 @@ def test_filter_by_publisher(client):
     assert "Lonely Book" not in response.text
 
 
-def test_pagination_is_50_per_page(tmp_path):
+def test_pagination_is_15_per_page(tmp_path):
     path = str(tmp_path / "many.db")
     conn = db.connect(path)
     db.init_schema(conn)
-    for i in range(51):
+    for i in range(16):
         db.add_book(conn, title=f"Book {i:03d}")
     conn.close()
     client = TestClient(create_app(Settings(port=8765, db_path=path, default_lang="en")))
 
     first = client.get("/")
-    assert first.text.count('<li class="flex min-w-0 flex-col') == 50
+    assert first.text.count('<li class="flex min-w-0 flex-col') == 15
     assert "1 / 2" in first.text
 
     second = client.get("/", params={"page": 2})

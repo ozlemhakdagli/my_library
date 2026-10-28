@@ -26,15 +26,14 @@
     <input type="hidden" name="status" value="{{ current }}">
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("field_started") }}</span>
-      <input type="text" name="started_on" value="{{ book.started_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
+      <input type="date" name="started_on" value="{{ book.started_on or '' }}">
     </label>
     {% if current == "read" %}
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("field_finished") }}</span>
-      <input type="text" name="finished_on" value="{{ book.finished_on or '' }}" placeholder="YYYY-MM-DD" aria-describedby="date-help">
+      <input type="date" name="finished_on" value="{{ book.finished_on or '' }}">
     </label>
     {% endif %}
-    <p id="date-help" class="meta sm:col-span-2">{{ t("date_help") }}</p>
     <div class="sm:col-span-2"><button type="submit" class="btn-secondary">{{ t("btn_save_dates") }}</button></div>
   </form>
   {% endif %}

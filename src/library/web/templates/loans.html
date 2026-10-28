@@ -18,7 +18,7 @@
     </label>
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("field_lent_on") }}</span>
-      <input type="text" name="lent_on" value="{{ today }}" placeholder="YYYY-MM-DD" required>
+      <input type="date" name="lent_on" value="{{ today }}" required>
     </label>
     <div><button type="submit" class="btn-primary">{{ t("btn_lend") }}</button></div>
   </form>
@@ -38,7 +38,7 @@
       <form method="post" action="/loans/{{ loan.loan_id }}/return?lang={{ lang }}" class="mt-2 flex flex-wrap items-end gap-2">
         <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
           <span>{{ t("field_returned_on") }}</span>
-          <input type="text" name="returned_on" value="{{ today }}" placeholder="YYYY-MM-DD" required>
+          <input type="date" name="returned_on" value="{{ today }}" required>
         </label>
         <button type="submit" class="btn-secondary">{{ t("btn_return") }}</button>
       </form>

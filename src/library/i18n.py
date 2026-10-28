@@ -221,7 +221,6 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         # book page and secondary pages
         "status_group_label": "Reading status",
         "btn_save_dates": "Save dates",
-        "date_help": "Format: YYYY-MM-DD, for example 2026-10-17.",
         "book_delete_confirm": "Delete this book? This cannot be undone.",
         # LLM suggestions (book page) and metadata completion (edit page)
         "suggest_btn": "Suggest similar books",
@@ -459,7 +458,6 @@ DICTIONARIES: dict[str, dict[str, str]] = {
         # kitap sayfası ve ikincil sayfalar
         "status_group_label": "Okuma durumu",
         "btn_save_dates": "Tarihleri kaydet",
-        "date_help": "Biçim: YYYY-MM-DD, örneğin 2026-10-17.",
         "book_delete_confirm": "Bu kitap silinsin mi? Bu işlem geri alınamaz.",
         # LLM suggestions (book page) and metadata completion (edit page)
         "suggest_btn": "Benzer kitap öner",
