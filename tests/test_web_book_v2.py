@@ -104,6 +104,14 @@ def test_setting_types_replaces_the_set(client, seeded):
     assert db_types(path, ids["alpha"]) == {ids["kagit"], ids["dijital"]}
 
 
+def test_assigned_type_badge_is_not_duplicated(client, seeded):
+    _, ids = seeded
+    fragment = client.post(
+        f"/books/{ids['alpha']}/types", data={"type_id": [str(ids["kagit"])]}, headers=HX
+    ).text
+    assert fragment.count("Kağıt") == 1
+
+
 def test_htmx_requests_return_only_the_changed_block(client, seeded):
     _, ids = seeded
     shelf = client.post(

@@ -1,9 +1,4 @@
 <div id="types-block" class="grid gap-2">
-  {% if chips %}
-  <div class="flex flex-wrap gap-2">
-    {% for chip in chips %}<span class="badge max-w-full truncate">{{ chip.name }}</span>{% endfor %}
-  </div>
-  {% endif %}
   <div class="panel grid gap-2">
     <p class="eyebrow">{{ t("field_types") }}</p>
     {% if error %}<p class="text-warn">{{ error }}</p>{% endif %}
