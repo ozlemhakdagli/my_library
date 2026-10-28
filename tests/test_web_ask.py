@@ -167,13 +167,13 @@ def test_htmx_post_returns_result_fragment_only(db_path):
     assert "<form" not in response.text
 
 
-def test_nav_links_to_ask(db_path):
+def test_nav_does_not_link_to_ask(db_path):
+    # The /ask page still works (used by the floating assistant), but it has no nav entry:
+    # the floating assistant on every page replaces it.
     html = _client(db_path).get("/").text
 
-    assert 'href="/ask"' in html
-    assert translate("en", "nav_ask") in html
+    assert 'href="/ask"' not in html
 
 
-def test_ask_nav_label_in_turkish(db_path):
-    assert translate("tr", "nav_ask") == "Sor"
+def test_ask_page_title_differs_by_language():
     assert translate("tr", "title_ask") != translate("en", "title_ask")

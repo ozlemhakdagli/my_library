@@ -219,3 +219,5 @@
 .assistant-table tr:last-child td { border-bottom: 0; }
 .assistant-table td a { color: var(--color-accent); text-decoration: none; }
 .assistant-table td a:hover { text-decoration: underline; }
+
+.cover-dropzone.is-dragover { border-color: var(--color-accent); background: var(--color-accent-soft, var(--color-bg)); }

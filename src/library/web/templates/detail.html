@@ -1,14 +1,15 @@
 {% extends "base.html" %}
+{% from "_cover_dropzone.html" import dropzone %}
 {% block title %}{{ book.title }}{% endblock %}
 {% block content %}
 <div class="grid gap-6 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
   <div class="mx-auto grid w-full max-w-60 gap-3 md:mx-0">
     {% include "_cover.html" %}
     <form method="post" action="/books/{{ book.id }}/cover" enctype="multipart/form-data" class="grid gap-2">
-      <label class="grid gap-1 text-sm [&>span]:text-muted">
+      <div class="grid gap-1 text-sm text-muted">
         <span>{{ t("cover_change") }}</span>
-        <input type="file" name="cover" accept="image/*" aria-describedby="cover-change-help">
-      </label>
+        {{ dropzone(t, t("cover_drop_replace"), help_id="cover-change-help") }}
+      </div>
       <p id="cover-change-help" class="text-sm text-muted">{{ t("cover_help") }}</p>
       {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
       <div><button type="submit">{{ t("cover_upload") }}</button></div>
@@ -75,8 +76,11 @@
       {% endif %}
     </section>
 
-    <section class="grid gap-2">
-      <h2 class="font-serif">{{ t("history_title") }}</h2>
+    <details class="group grid gap-2">
+      <summary class="flex cursor-pointer list-none items-center gap-2 font-serif text-[1.25rem] font-semibold [&::-webkit-details-marker]:hidden">
+        <svg class="h-4 w-4 shrink-0 transition-transform group-open:rotate-90" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 2l6 6-6 6"/></svg>
+        {{ t("history_title") }}
+      </summary>
       {% if history %}
       <ul class="divide-y divide-line">
         {% for entry in history %}
@@ -93,7 +97,7 @@
       {% else %}
       <p class="text-muted">{{ t("history_empty") }}</p>
       {% endif %}
-    </section>
+    </details>
 
     <section class="grid gap-2">
       <h2 class="font-serif">{{ t("photos_title") }}</h2>

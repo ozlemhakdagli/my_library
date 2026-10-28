@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_cover_dropzone.html" import dropzone %}
 {% block title %}{{ t("btn_add") }}{% endblock %}
 {% block content %}
 <h1 class="font-serif">{{ t("btn_add") }}</h1>
@@ -33,10 +34,10 @@
     {% if ocr_note %}<p class="text-sm text-muted" role="status">{{ ocr_note }}</p>{% endif %}
     {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
   </div>
-  <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+  <div class="grid gap-1 text-sm text-muted">
     <span>{{ t("field_cover") }}</span>
-    <input type="file" name="cover" accept="image/*" aria-describedby="cover-help">
-  </label>
+    {{ dropzone(t, t("cover_drop_text")) }}
+  </div>
   <p id="cover-help" class="text-sm text-muted">{{ t("cover_help") }}</p>
   <div class="flex flex-wrap gap-2">
     <button type="button" id="ocr-button" disabled

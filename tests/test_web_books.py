@@ -124,6 +124,22 @@ def test_add_form_renders(client):
     assert "<form" in response.text
 
 
+def test_add_form_cover_field_is_a_dropzone(client):
+    # The file input is still a real <input type=file name=cover>, just wrapped in a
+    # drag-and-drop zone with a hint; JavaScript off still lets the plain input work.
+    text = client.get("/books/new").text
+    assert 'data-cover-dropzone' in text
+    assert 'name="cover"' in text
+    assert "Drag a photo here" in text
+
+
+def test_book_detail_cover_change_is_also_a_dropzone(client, db_path):
+    book_id = book_id_by_title(db_path, "Lonely Book")
+    text = client.get(f"/books/{book_id}").text
+    assert 'data-cover-dropzone' in text
+    assert "Drag a new photo here" in text
+
+
 def test_add_creates_book(client, db_path):
     response = client.post(
         "/books/new",
@@ -222,6 +238,17 @@ def test_detail_shows_change_history_in_english(client, db_path):
     assert "Eski Ad" in text
     assert "Yeni Ad" in text
     assert "Eski Ad → Yeni Ad" in text
+
+
+def test_change_history_is_collapsed_by_default(client, db_path):
+    # The history list is inside a <details> element and starts closed (no "open" attribute),
+    # so it only shows once the reader clicks the "Change history" heading.
+    book_id = seed_detailed_book(db_path)
+    text = client.get(f"/books/{book_id}").text
+    start = text.index("Change history")
+    details_start = text.rindex("<details", 0, start)
+    tag = text[details_start : text.index(">", details_start)]
+    assert "open" not in tag
 
 
 def test_detail_shows_change_history_in_turkish(client, db_path):

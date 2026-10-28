@@ -1,0 +1,18 @@
+{% macro dropzone(t, hint_text, preview_url=none, help_id="cover-help") %}
+<div class="cover-dropzone group relative grid place-items-center gap-2 rounded-xl border-2 border-dashed border-line bg-bg px-4 py-6 text-center transition-colors hover:border-accent"
+     data-cover-dropzone aria-describedby="{{ help_id }}">
+  <input type="file" name="cover" accept="image/*" aria-describedby="{{ help_id }}"
+         class="absolute inset-0 h-full w-full cursor-pointer opacity-0">
+  <img class="cover-dropzone-preview hidden h-24 w-24 rounded-lg object-cover shadow-sm"
+       {% if preview_url %}src="{{ preview_url }}" alt=""{% endif %} alt="">
+  {% if preview_url %}
+  <img class="cover-dropzone-current h-24 w-24 rounded-lg object-cover shadow-sm" src="{{ preview_url }}" alt="">
+  {% else %}
+  <svg class="cover-dropzone-icon h-8 w-8 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+    <path d="M4 16.5V18a2 2 0 002 2h12a2 2 0 002-2v-1.5M7 9l5-5 5 5M12 4v12"/>
+  </svg>
+  {% endif %}
+  <p class="cover-dropzone-text pointer-events-none text-sm text-muted">{{ hint_text }}</p>
+  <p class="cover-dropzone-filename pointer-events-none hidden text-sm font-medium text-ink"></p>
+</div>
+{% endmacro %}
