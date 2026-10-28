@@ -1,6 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ t("title_ask") }}<script src="/static/ask.js" defer></script>
-{% endblock %}
+{% block title %}{{ t("title_ask") }}{% endblock %}
 {% block content %}
 <h1 class="font-serif">{{ t("title_ask") }}</h1>
 
@@ -26,5 +25,5 @@
 <div id="ask-result" class="mt-4">
   {% include "_ask_result.html" %}
 </div>
-<script src="/static/ask.js" defer></script>
+<script src="/static/ask.js?v={{ asset_version }}" defer></script>
 {% endblock %}

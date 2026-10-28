@@ -59,7 +59,8 @@ def test_full_page_links_local_css_and_htmx(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "<html" in response.text
-    assert re.search(r'<link[^>]*href="/static/app\.css"', response.text)
+    # The href carries a ?v=<version> cache-busting query string.
+    assert re.search(r'<link[^>]*href="/static/app\.css\?v=', response.text)
     assert re.search(r'<script[^>]*src="/static/htmx\.min\.js"', response.text)
 
 

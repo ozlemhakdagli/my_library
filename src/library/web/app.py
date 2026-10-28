@@ -130,6 +130,20 @@ def _theme_class(request: Request) -> str:
     return "" if theme == "system" else theme
 
 
+def _static_asset_version() -> str:
+    """A number that changes whenever a static file's content changes, for cache-busting.
+
+    Linked as ?v=<version> on every CSS/JS tag so a browser that cached an old file
+    (including one restored from the back-forward cache) always fetches the current one.
+    """
+    static_dir = WEB_DIR / "static"
+    newest = 0.0
+    for path in static_dir.glob("*"):
+        if path.is_file():
+            newest = max(newest, path.stat().st_mtime)
+    return str(int(newest))
+
+
 templates = Jinja2Templates(
     env=Environment(
         loader=FileSystemLoader(WEB_DIR / "templates"),
@@ -138,6 +152,7 @@ templates = Jinja2Templates(
 )
 templates.env.globals["theme_of"] = _theme_of
 templates.env.globals["theme_class"] = _theme_class
+templates.env.globals["asset_version"] = _static_asset_version()
 
 
 def _upgrade_existing_db(db_path: str) -> None:
