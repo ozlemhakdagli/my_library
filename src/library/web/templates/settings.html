@@ -1,28 +1,28 @@
 {% extends "base.html" %}
 {% block title %}{{ t("title_settings") }}{% endblock %}
 {% block content %}
-<h1 class="font-serif">{{ t("title_settings") }}</h1>
+<h1>{{ t("title_settings") }}</h1>
 
-<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
-  <h2>{{ t("settings_backup_title") }}</h2>
-  <p>{{ t("settings_backup_help") }}</p>
+<section class="section grid gap-3">
+  <p class="eyebrow">{{ t("settings_backup_title") }}</p>
+  <p class="meta">{{ t("settings_backup_help") }}</p>
   <form method="post" action="/settings/backup?lang={{ lang }}">
-    <button type="submit">{{ t("btn_backup") }}</button>
+    <button type="submit" class="btn-secondary">{{ t("btn_backup") }}</button>
   </form>
   {% if backup_path %}
   <p class="rounded-md bg-surface p-3 text-accent" role="status">{{ t("settings_backup_done", path=backup_path) }}</p>
   {% endif %}
 </section>
 
-<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
-  <h2>{{ t("settings_export_title") }}</h2>
-  <p>{{ t("settings_export_help") }}</p>
-  <p><a href="/settings/export.csv?lang={{ lang }}" download>{{ t("btn_export") }}</a></p>
+<section class="section grid gap-3">
+  <p class="eyebrow">{{ t("settings_export_title") }}</p>
+  <p class="meta">{{ t("settings_export_help") }}</p>
+  <p><a href="/settings/export.csv?lang={{ lang }}" download class="btn-secondary no-underline">{{ t("btn_export") }}</a></p>
 </section>
 
-<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
-  <h2>{{ t("settings_language_title") }}</h2>
-  <form method="post" action="/settings/language">
+<section class="section grid gap-3">
+  <p class="eyebrow">{{ t("settings_language_title") }}</p>
+  <form method="post" action="/settings/language" class="grid gap-3">
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("settings_language_label") }}</span>
       <select name="lang">
@@ -31,7 +31,7 @@
         {% endfor %}
       </select>
     </label>
-    <button type="submit">{{ t("btn_save") }}</button>
+    <div><button type="submit" class="btn-secondary">{{ t("btn_save") }}</button></div>
   </form>
 </section>
 {% endblock %}

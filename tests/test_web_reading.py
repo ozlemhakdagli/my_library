@@ -9,7 +9,6 @@ from library.config import Settings
 from library.web.app import create_app
 
 WEB = Path(__file__).resolve().parent.parent / "src" / "library" / "web"
-LAYOUT_CLASS = "rounded-xl"
 
 
 @pytest.fixture
@@ -70,7 +69,9 @@ def test_finished_per_year_groups_by_finished_on_year(seeded):
 def test_reading_page_shows_counts_and_years(client):
     response = client.get("/reading")
     assert response.status_code == 200
-    assert LAYOUT_CLASS in response.text
+    # /reading was migrated to the editorial redesign (2026-10-28): "section", not the
+    # old boxed-card layout.
+    assert "section" in response.text
     assert "Reading" in response.text
     assert "2024" in response.text
     assert "Finished per year" in response.text
@@ -96,14 +97,11 @@ def test_reading_page_empty_years_message(tmp_path):
 
 @pytest.mark.parametrize("path", ["/loans", "/review", "/settings"])
 def test_secondary_pages_use_new_layout(client, path):
+    # All three were migrated to the editorial redesign (2026-10-28): .section/.panel
+    # replaced the old boxed-card layout.
     response = client.get(path)
     assert response.status_code == 200
-    # /loans and /review were migrated to the editorial redesign (2026-10-28), which
-    # replaced the old "rounded-xl" boxed-card layout with .section/.panel; /settings
-    # still uses the pre-redesign layout until its own task (7) migrates it.
-    editorial_paths = {"/loans", "/review"}
-    expected = "section" if path in editorial_paths else LAYOUT_CLASS
-    assert expected in response.text
+    assert "section" in response.text
 
 
 def test_loans_hide_deleted_books(client):
