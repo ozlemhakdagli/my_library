@@ -1,5 +1,11 @@
-<div id="shelf-block" class="grid gap-3 rounded-xl border border-line bg-surface p-4">
-  <form method="post" action="/books/{{ book_id }}/shelf" hx-post="/books/{{ book_id }}/shelf" hx-target="#shelf-block" hx-swap="outerHTML" class="flex flex-wrap items-end gap-2">
+<div id="shelf-block" class="grid gap-2">
+  {% set shelf_name %}{% for shelf in shelves if shelf.id == shelf_id %}{{ shelf.name }}{% endfor %}{% endset %}
+  {% if shelf_name %}
+  <div class="flex flex-wrap gap-2">
+    <span class="badge max-w-full truncate">{{ shelf_name }}</span>
+  </div>
+  {% endif %}
+  <form method="post" action="/books/{{ book_id }}/shelf" hx-post="/books/{{ book_id }}/shelf" hx-target="#shelf-block" hx-swap="outerHTML" class="panel flex flex-wrap items-end gap-2">
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("field_shelf") }}</span>
       <select name="shelf_id">
@@ -9,7 +15,7 @@
         {% endfor %}
       </select>
     </label>
-    <button type="submit">{{ t("btn_save") }}</button>
+    <button type="submit" class="btn-secondary">{{ t("btn_save") }}</button>
   </form>
   {% if error %}<p class="text-warn">{{ error }}</p>{% endif %}
 </div>

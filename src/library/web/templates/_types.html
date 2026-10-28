@@ -1,24 +1,31 @@
-<div id="types-block" class="grid gap-3 rounded-xl border border-line bg-surface p-4">
-  <h2>{{ t("field_types") }}</h2>
-  {% if error %}<p class="text-warn">{{ error }}</p>{% endif %}
+<div id="types-block" class="grid gap-2">
+  {% if chips %}
   <div class="flex flex-wrap gap-2">
-    {% for chip in chips %}
-    <form method="post" action="/books/{{ book_id }}/types" hx-post="/books/{{ book_id }}/types" hx-target="#types-block" hx-swap="outerHTML" class="inline">
-      {% for other in chips if other.id != chip.id %}<input type="hidden" name="type_id" value="{{ other.id }}">{% endfor %}
-      <span class="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-sm [&_button]:bg-transparent [&_button]:p-0 [&_button]:text-ink">{{ chip.name }}<button type="submit" aria-label="{{ t('btn_remove') }}" title="{{ t('btn_remove') }}">&times;</button></span>
-    </form>
-    {% endfor %}
+    {% for chip in chips %}<span class="badge max-w-full truncate">{{ chip.name }}</span>{% endfor %}
   </div>
-  {% if addable %}
-  <form method="post" action="/books/{{ book_id }}/types" hx-post="/books/{{ book_id }}/types" hx-target="#types-block" hx-swap="outerHTML" class="flex flex-wrap items-end gap-2">
-    {% for chip in chips %}<input type="hidden" name="type_id" value="{{ chip.id }}">{% endfor %}
-    <select name="type_id" aria-label="{{ t('type_add') }}">
-      <option value="">{{ t("type_add") }}</option>
-      {% for type in addable %}
-      <option value="{{ type.id }}">{{ type.name }}</option>
-      {% endfor %}
-    </select>
-    <button type="submit">{{ t("btn_add") }}</button>
-  </form>
   {% endif %}
+  <div class="panel grid gap-2">
+    <p class="eyebrow">{{ t("field_types") }}</p>
+    {% if error %}<p class="text-warn">{{ error }}</p>{% endif %}
+    <div class="flex flex-wrap gap-2">
+      {% for chip in chips %}
+      <form method="post" action="/books/{{ book_id }}/types" hx-post="/books/{{ book_id }}/types" hx-target="#types-block" hx-swap="outerHTML" class="inline">
+        {% for other in chips if other.id != chip.id %}<input type="hidden" name="type_id" value="{{ other.id }}">{% endfor %}
+        <span class="badge max-w-full truncate [&_button]:bg-transparent [&_button]:p-0 [&_button]:text-ink">{{ chip.name }}<button type="submit" aria-label="{{ t('btn_remove') }}" title="{{ t('btn_remove') }}">&times;</button></span>
+      </form>
+      {% endfor %}
+    </div>
+    {% if addable %}
+    <form method="post" action="/books/{{ book_id }}/types" hx-post="/books/{{ book_id }}/types" hx-target="#types-block" hx-swap="outerHTML" class="flex flex-wrap items-end gap-2">
+      {% for chip in chips %}<input type="hidden" name="type_id" value="{{ chip.id }}">{% endfor %}
+      <select name="type_id" aria-label="{{ t('type_add') }}">
+        <option value="">{{ t("type_add") }}</option>
+        {% for type in addable %}
+        <option value="{{ type.id }}">{{ type.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-secondary">{{ t("btn_add") }}</button>
+    </form>
+    {% endif %}
+  </div>
 </div>

@@ -6,11 +6,11 @@
   <div class="mx-auto grid w-full max-w-60 gap-3 md:mx-0">
     {% include "_cover.html" %}
     <form method="post" action="/books/{{ book.id }}/cover" enctype="multipart/form-data" class="grid gap-2">
-      <div class="grid gap-1 text-sm text-muted">
+      <div class="grid gap-1 meta">
         <span>{{ t("cover_change") }}</span>
         {{ dropzone(t, t("cover_drop_replace"), help_id="cover-change-help") }}
       </div>
-      <p id="cover-change-help" class="text-sm text-muted">{{ t("cover_help") }}</p>
+      <p id="cover-change-help" class="meta">{{ t("cover_help") }}</p>
       {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
       <div><button type="submit">{{ t("cover_upload") }}</button></div>
     </form>
@@ -18,17 +18,17 @@
 
   <div class="grid min-w-0 content-start gap-6">
     <header class="grid gap-2">
-      <h1 class="font-serif">{{ book.title }}</h1>
+      <h1>{{ book.title }}</h1>
       {% if book.subtitle %}<p class="text-lg text-muted">{{ book.subtitle }}</p>{% endif %}
       <p class="text-sm font-semibold uppercase tracking-wide">{{ book.authors | join("; ") or t("unknown") }}</p>
-      <dl class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-sm">
-        <dt class="text-muted">{{ t("field_publisher") }}</dt>
+      <dl class="meta grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1">
+        <dt>{{ t("field_publisher") }}</dt>
         <dd>{{ book.publisher or t("unknown") }}</dd>
-        <dt class="text-muted">{{ t("field_loan") }}</dt>
+        <dt>{{ t("field_loan") }}</dt>
         <dd>{% if book.loan %}{{ book.loan.borrower }}{% else %}{{ t("not_on_loan") }}{% endif %}</dd>
       </dl>
       {% if book.review_status == "needs review" %}
-      <p><span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">{{ t("needs_review") }}</span></p>
+      <p><span class="badge badge-warn">{{ t("needs_review") }}</span></p>
       {% endif %}
       {% if book.note %}<p class="whitespace-pre-line pt-1">{{ book.note }}</p>{% endif %}
     </header>
@@ -43,44 +43,41 @@
     {% include "_types.html" %}
 
     <div class="flex flex-wrap items-center gap-3">
-      <a href="/books/{{ book.id }}/edit?lang={{ lang }}"
-         class="inline-flex items-center rounded-md bg-accent px-4 py-2 text-bg no-underline">{{ t("btn_edit") }}</a>
+      <a href="/books/{{ book.id }}/edit?lang={{ lang }}" class="btn-primary no-underline">{{ t("btn_edit") }}</a>
       <form method="post" action="/books/{{ book.id }}/delete" onsubmit='return confirm({{ t("book_delete_confirm")|tojson }});'>
-        <button type="submit" class="border border-danger bg-transparent text-danger">{{ t("btn_delete") }}</button>
+        <button type="submit" class="btn-secondary !text-danger">{{ t("btn_delete") }}</button>
       </form>
     </div>
 
-    <section class="grid gap-3 rounded-xl border border-line bg-surface p-4" aria-labelledby="suggest-title">
-      <h2 id="suggest-title" class="font-serif">{{ t("suggest_title") }}</h2>
-      <p class="text-sm text-muted">{{ t("suggest_help") }}</p>
+    <section class="section grid gap-3" aria-labelledby="suggest-title">
+      <p id="suggest-title" class="eyebrow">{{ t("suggest_title") }}</p>
+      <p class="meta">{{ t("suggest_help") }}</p>
       <form method="post" action="/books/{{ book.id }}/suggest" hx-post="/books/{{ book.id }}/suggest"
             hx-target="#suggestions-result" hx-swap="outerHTML">
-        <button type="submit" class="border border-accent bg-transparent text-accent">{{ t("suggest_btn") }}</button>
+        <button type="submit" class="btn-secondary">{{ t("suggest_btn") }}</button>
       </form>
       {% include "_suggestions.html" %}
     </section>
 
-    <section class="grid gap-2">
-      <h2 class="font-serif">{{ t("loan_history_title") }}</h2>
+    <section class="section grid gap-2">
+      <p class="eyebrow">{{ t("loan_history_title") }}</p>
       {% if loans %}
       <ul class="divide-y divide-line">
         {% for loan in loans %}
         <li class="grid gap-0.5 py-3 text-sm [overflow-wrap:anywhere]">
           <span class="font-semibold">{{ loan.borrower }}</span>
-          <span class="text-muted">{{ t("loan_lent_on") }}: {{ loan.lent_on }}{% if loan.returned_on %} · {{ t("loan_returned_on") }}: {{ loan.returned_on }}{% endif %}</span>
+          <span class="meta">{{ t("loan_lent_on") }}: {{ loan.lent_on }}{% if loan.returned_on %} · {{ t("loan_returned_on") }}: {{ loan.returned_on }}{% endif %}</span>
         </li>
         {% endfor %}
       </ul>
       {% else %}
-      <p class="text-muted">{{ t("loan_empty") }}</p>
+      <p class="meta">{{ t("loan_empty") }}</p>
       {% endif %}
     </section>
 
-    <div>
-      <button type="button" data-dialog-open="history-dialog" class="btn-plain font-serif text-[1.25rem] font-semibold underline decoration-dotted underline-offset-4">
-        {{ t("history_title") }}
-      </button>
-    </div>
+    <section class="section grid gap-2">
+      <div><button type="button" data-dialog-open="history-dialog" class="btn-secondary">{{ t("history_title") }}</button></div>
+    </section>
     <dialog id="history-dialog" class="history-dialog w-[calc(100%-2rem)] max-w-lg rounded-xl border border-line bg-surface p-0 text-ink">
       <div class="flex items-center justify-between gap-3 border-b border-line p-4">
         <h2 class="font-serif text-[1.25rem] font-semibold">{{ t("history_title") }}</h2>
@@ -106,8 +103,8 @@
       </div>
     </dialog>
 
-    <section class="grid gap-2">
-      <h2 class="font-serif">{{ t("photos_title") }}</h2>
+    <section class="section grid gap-2">
+      <p class="eyebrow">{{ t("photos_title") }}</p>
       {% if photos %}
       <ul class="divide-y divide-line">
         {% for photo in photos %}
@@ -115,7 +112,7 @@
         {% endfor %}
       </ul>
       {% else %}
-      <p class="text-muted">{{ t("photos_empty") }}</p>
+      <p class="meta">{{ t("photos_empty") }}</p>
       {% endif %}
     </section>
   </div>
