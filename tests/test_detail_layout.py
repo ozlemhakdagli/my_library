@@ -109,7 +109,7 @@ def test_secondary_pages_return_200_with_serif_title(db_path, lang):
     # in tailwind.input.css for the serif title (no class needed); pages not yet
     # migrated still carry the pre-redesign font-serif class. Move a path here as its
     # own task migrates it.
-    bare_h1_paths = {"/books/new", "/shelves", "/types"}
+    bare_h1_paths = {"/books/new", "/shelves", "/types", "/loans", "/review"}
     for path in ("/loans", "/review", "/shelves", "/types", "/reading", "/settings", "/books/new"):
         response = client.get(path, params={"lang": lang})
         assert response.status_code == 200, path

@@ -98,7 +98,12 @@ def test_reading_page_empty_years_message(tmp_path):
 def test_secondary_pages_use_new_layout(client, path):
     response = client.get(path)
     assert response.status_code == 200
-    assert LAYOUT_CLASS in response.text
+    # /loans and /review were migrated to the editorial redesign (2026-10-28), which
+    # replaced the old "rounded-xl" boxed-card layout with .section/.panel; /settings
+    # still uses the pre-redesign layout until its own task (7) migrates it.
+    editorial_paths = {"/loans", "/review"}
+    expected = "section" if path in editorial_paths else LAYOUT_CLASS
+    assert expected in response.text
 
 
 def test_loans_hide_deleted_books(client):

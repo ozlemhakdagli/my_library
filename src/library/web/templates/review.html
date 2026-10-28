@@ -1,26 +1,26 @@
 {% extends "base.html" %}
 {% block title %}{{ t("title_review") }}{% endblock %}
 {% block content %}
-<h1 class="font-serif">{{ t("title_review") }}</h1>
+<h1>{{ t("title_review") }}</h1>
 
 {% if items %}
-<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
+<section class="section grid gap-3">
 <ul class="divide-y divide-line">
   {% for item in items %}
   <li class="py-3 [overflow-wrap:anywhere]" data-review-id="{{ item.id }}">
     <div class="font-semibold">
       {% if item.book_id %}{{ item.title }}{% else %}{{ t("unreadable_title") }}{% endif %}
     </div>
-    <div class="flex flex-wrap gap-x-3 text-sm text-muted">
+    <div class="flex flex-wrap gap-x-3 meta">
       <span>{{ t("field_reason") }}: {{ item.reason_label }}</span>
       {% if item.photo_file %}<span>{{ t("field_photo") }}: {{ item.photo_file }}</span>{% endif %}
     </div>
     <div class="mt-2 flex flex-wrap items-center gap-3">
-      <form method="post" action="/review/{{ item.id }}?lang={{ lang }}">
-        <button type="submit" name="action" value="confirm">{{ t("btn_confirm") }}</button>
-        <button type="submit" name="action" value="not_a_book">{{ t("btn_not_a_book") }}</button>
+      <form method="post" action="/review/{{ item.id }}?lang={{ lang }}" class="flex flex-wrap gap-2">
+        <button type="submit" name="action" value="confirm" class="btn-secondary">{{ t("btn_confirm") }}</button>
+        <button type="submit" name="action" value="not_a_book" class="btn-secondary">{{ t("btn_not_a_book") }}</button>
       </form>
-      {% if item.book_id %}<a href="/books/{{ item.book_id }}/edit?lang={{ lang }}">{{ t("btn_correct") }}</a>{% endif %}
+      {% if item.book_id %}<a href="/books/{{ item.book_id }}/edit?lang={{ lang }}" class="btn-secondary no-underline">{{ t("btn_correct") }}</a>{% endif %}
     </div>
   </li>
   {% endfor %}
@@ -35,8 +35,6 @@
 </nav>
 {% endif %}
 {% else %}
-<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
-  <p class="text-muted">{{ t("review_empty") }}</p>
-</section>
+<p class="meta">{{ t("review_empty") }}</p>
 {% endif %}
 {% endblock %}
