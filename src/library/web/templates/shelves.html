@@ -1,19 +1,20 @@
 {% extends "base.html" %}
 {% block title %}{{ t("title_shelves") }}{% endblock %}
 {% block content %}
-<h1 class="font-serif">{{ t("title_shelves") }}</h1>
+<h1>{{ t("title_shelves") }}</h1>
 
 {% if error %}
 <p class="rounded-md bg-surface p-3 text-accent" role="alert">{{ error }}</p>
 {% endif %}
 
-<section class="grid gap-3 rounded-xl border border-line bg-surface p-4">
-  <form method="post" action="/shelves?lang={{ lang }}">
+<section class="section grid gap-3">
+  <p class="eyebrow">{{ t("manage_add_shelf") }}</p>
+  <form method="post" action="/shelves?lang={{ lang }}" class="panel flex flex-wrap items-end gap-2">
     <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
       <span>{{ t("manage_name") }}</span>
       <input type="text" name="name" value="{{ form_name or '' }}" maxlength="200" required>
     </label>
-    <button type="submit">{{ t("btn_add") }}</button>
+    <button type="submit" class="btn-primary">{{ t("btn_add") }}</button>
   </form>
 </section>
 
@@ -22,20 +23,20 @@
   {% for item in items %}
   <li class="py-3 [overflow-wrap:anywhere]">
     <div class="font-semibold">{{ item.name }}</div>
-    <div class="flex flex-wrap gap-x-3 text-sm text-muted"><span>{{ t("manage_book_count", count=item.book_count) }}</span></div>
+    <div class="flex flex-wrap gap-x-3 meta"><span>{{ t("manage_book_count", count=item.book_count) }}</span></div>
     <div class="mt-2 flex flex-wrap items-center gap-3">
-      <form method="post" action="/shelves/{{ item.id }}/rename?lang={{ lang }}">
+      <form method="post" action="/shelves/{{ item.id }}/rename?lang={{ lang }}" class="flex items-center gap-2">
         <input type="text" name="name" value="{{ item.name }}" maxlength="200" required aria-label="{{ t('manage_name') }}">
-        <button type="submit">{{ t("btn_rename") }}</button>
+        <button type="submit" class="btn-secondary">{{ t("btn_rename") }}</button>
       </form>
       <form method="post" action="/shelves/{{ item.id }}/delete?lang={{ lang }}" onsubmit='return confirm({{ t("manage_confirm_delete_shelf")|tojson }});'>
-        <button type="submit">{{ t("btn_delete") }}</button>
+        <button type="submit" class="btn-secondary">{{ t("btn_delete") }}</button>
       </form>
     </div>
   </li>
   {% endfor %}
 </ul>
 {% else %}
-<p class="text-muted">{{ t("manage_empty_shelves") }}</p>
+<p class="meta">{{ t("manage_empty_shelves") }}</p>
 {% endif %}
 {% endblock %}
