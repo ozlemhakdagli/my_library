@@ -4,8 +4,8 @@
     {% include "_cover.html" %}
     {% if book.types %}
     <div class="flex flex-wrap gap-1">
-      {% for type_name in book.types[:2] %}<span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs text-muted">{{ type_name }}</span>{% endfor %}
-      {% if book.types | length > 2 %}<span class="inline-block rounded-full bg-surface px-2 py-0.5 text-xs text-muted">{{ t("more_types", count=book.types | length - 2) }}</span>{% endif %}
+      {% for type_name in book.types[:2] %}<span class="badge max-w-full truncate">{{ type_name }}</span>{% endfor %}
+      {% if book.types | length > 2 %}<span class="badge max-w-full truncate">{{ t("more_types", count=book.types | length - 2) }}</span>{% endif %}
     </div>
     {% endif %}
   </a>
@@ -16,12 +16,12 @@
   {% else %}
     {% set status_text = t("status_unread") %}
   {% endif %}
-  <span data-status-label class="block min-w-0 truncate text-xs text-muted">{{ status_text }}</span>
+  <span data-status-label class="badge max-w-full truncate">{{ status_text }}</span>
   {% if book.shelf or book.loan or book.review_status == "needs review" %}
-  <div class="flex flex-wrap gap-2 text-xs text-muted">
-    {% if book.shelf %}<span class="min-w-0 truncate">{{ book.shelf }}</span>{% endif %}
-    {% if book.loan %}<span class="inline-block rounded-full bg-surface px-2 py-0.5">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
-    {% if book.review_status == "needs review" %}<span class="inline-block rounded-full bg-warn-bg px-2 py-0.5 text-warn">{{ t("needs_review") }}</span>{% endif %}
+  <div class="flex flex-wrap gap-2">
+    {% if book.shelf %}<span class="badge max-w-full truncate">{{ book.shelf }}</span>{% endif %}
+    {% if book.loan %}<span class="badge max-w-full truncate">{{ t("field_loan") }}: {{ book.loan.borrower }}</span>{% endif %}
+    {% if book.review_status == "needs review" %}<span class="badge badge-warn max-w-full truncate">{{ t("needs_review") }}</span>{% endif %}
   </div>
   {% endif %}
 </li>

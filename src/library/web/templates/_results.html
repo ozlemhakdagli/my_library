@@ -15,7 +15,7 @@
   {% if filters.needs_review %}{% set ns.count = ns.count + 1 %}{% endif %}
 
   <div class="grid gap-2">
-    <p class="font-serif text-lg text-muted">{{ t("results_count", count=total) }}</p>
+    <p class="meta">{{ t("results_count", count=total) }}</p>
     {% if ns.count %}
     <div class="flex flex-wrap items-center gap-2 text-sm">
       <span class="text-muted">{{ t("filters_active") }} · {{ t("filters_count", count=ns.count) }}</span>
@@ -55,9 +55,9 @@
   </nav>
   {% endif %}
   {% else %}
-  <div class="grid justify-items-start gap-1 rounded-xl border border-dashed border-line px-5 py-10">
-    <p class="font-serif text-lg">{{ t("empty_title") }}</p>
-    <p class="text-sm text-muted">{{ t("empty_hint") }}</p>
+  <div class="section grid gap-1">
+    <p class="meta">{{ t("empty_title") }}</p>
+    <p class="meta">{{ t("empty_hint") }}</p>
   </div>
   {% endif %}
 </div>

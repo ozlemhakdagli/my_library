@@ -18,9 +18,9 @@
 
 {% block content %}
 <div class="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-  <details class="filter-panel group min-w-0 self-start rounded-xl border border-line bg-surface lg:sticky lg:top-4">
+  <details class="filter-panel panel group min-w-0 self-start !p-0 lg:sticky lg:top-4">
     <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 lg:hidden">
-      <span class="text-xs font-semibold uppercase tracking-wider text-muted">{{ t("filters_title") }}</span>
+      <span class="eyebrow">{{ t("filters_title") }}</span>
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
            class="h-4 w-4 text-muted transition-transform group-open:rotate-180">
         <path d="m6 9 6 6 6-6"></path>
@@ -32,7 +32,7 @@
           hx-trigger="change, submit, input changed delay:300ms from:input[type=search], input changed delay:300ms from:input[type=text]"
           class="grid gap-5 px-4 pt-1 pb-4 lg:px-5 lg:pt-5">
       <input type="hidden" name="lang" value="{{ lang }}">
-      <h2 class="hidden text-xs font-semibold uppercase tracking-wider text-muted lg:block">{{ t("filters_title") }}</h2>
+      <p class="eyebrow hidden lg:block">{{ t("filters_title") }}</p>
 
       <label class="grid gap-1.5">
         <span class="text-sm text-muted">{{ t("field_shelf") }}</span>
@@ -89,16 +89,16 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
-        <button type="submit" class="rounded-full px-4 py-1.5 text-sm">{{ t("btn_search") }}</button>
-        <a href="{{ clear_url }}" class="text-sm text-accent underline-offset-4 hover:underline">{{ t("filter_clear") }}</a>
+        <button type="submit" class="btn-secondary">{{ t("btn_search") }}</button>
+        <a href="{{ clear_url }}" class="btn-secondary no-underline">{{ t("filter_clear") }}</a>
       </div>
     </form>
   </details>
 
   <section class="min-w-0">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="font-serif text-[1.75rem] leading-tight font-semibold">{{ t("title_books") }}</h1>
-      <a href="/books/new" class="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-bg no-underline hover:opacity-90">+ {{ t("add_book") }}</a>
+      <h1 class="title">{{ t("title_books") }}</h1>
+      <a href="/books/new" class="btn-primary no-underline">+ {{ t("add_book") }}</a>
     </div>
     {% include "_results.html" %}
   </section>
