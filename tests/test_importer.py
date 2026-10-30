@@ -205,7 +205,7 @@ def test_import_with_matching_expected_counts_commits(conn, raw_dir):
     assert _count(conn, "book") == 2
 
 
-@pytest.mark.skipif(not REAL_RAW.is_dir(), reason="data/raw not present")
+@pytest.mark.skipif(not any(REAL_RAW.glob("*.jsonl")), reason="data/raw has no export files")
 def test_real_raw_data_matches_expected_counts(tmp_path):
     # Read-only use of data/raw: the importer never writes there.
     db_path = tmp_path / "real.db"

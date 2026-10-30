@@ -248,8 +248,7 @@ dialog.history-dialog::backdrop { background: rgba(0,0,0,.4); }
   border-radius: 0;
 }
 
-/* Editorial redesign (2026-10-28): shared component vocabulary used on every page.
-   See docs/superpowers/specs/2026-10-28-editorial-redesign-design.md. */
+/* Shared component vocabulary used on every page. */
 .title, h1 { font-family: ui-serif, Georgia, serif; font-size: 2rem; font-weight: 600; line-height: 1.15; color: var(--ink); }
 .eyebrow { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; color: var(--muted); }
 .meta { font-size: .875rem; color: var(--muted); }

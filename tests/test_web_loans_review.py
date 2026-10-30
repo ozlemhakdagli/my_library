@@ -205,7 +205,7 @@ def test_review_list_turkish_labels(client, db_path):
     assert "İnceleme kuyruğu" in response.text
 
 
-@pytest.mark.skipif(not REAL_RAW.is_dir(), reason="data/raw not present")
+@pytest.mark.skipif(not any(REAL_RAW.glob("*.jsonl")), reason="data/raw has no export files")
 def test_real_data_review_queue_has_78_items(tmp_path):
     path = str(tmp_path / "real.db")
     conn = db.connect(path)

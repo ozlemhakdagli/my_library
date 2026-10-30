@@ -29,19 +29,15 @@ A single-user personal book library. You browse, search and edit your books in a
 
 Requirements: Docker with Compose.
 
-1. Copy the example environment file:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Start the app from the project directory:
+1. Start the app from the project directory. No configuration is needed; the defaults work out of the box:
 
    ```bash
    docker compose up -d --build
    ```
 
-3. Open http://localhost:8765 in your browser.
+2. Open http://localhost:8765 in your browser.
+
+To change a setting, copy `.env.example` to `.env` and edit it. See Configuration below.
 
 ## Configuration
 
@@ -87,8 +83,7 @@ docker compose cp library:/data/backups ./backups
 | `src/library/` | The application: web routes and templates (`web/`), database access (`db.py`), import, covers, the assistant and translations (`i18n.py`). |
 | `tests/` | Pytest tests for the database, the web pages, the importer and the assistant. `test_smoke.sh` checks the running container. |
 | `scripts/` | `import_books.sh`, the one-time import. |
-| `tools/` | Helper scripts: the Tailwind CLI and the asset fetch script. |
-| `docs/superpowers/` | Design notes and implementation plans. |
+| `tools/` | `fetch_assets.sh` downloads the Tailwind CLI into `tools/` and HTMX into the static folder. |
 | `Dockerfile`, `docker-compose.yml` | The image and the single service with its data volume. |
 | `pyproject.toml` | Python package metadata and dependencies. |
 
@@ -120,7 +115,7 @@ The smoke test builds and checks the running app, so it needs Docker:
 bash tests/test_smoke.sh
 ```
 
-Styles are compiled with the Tailwind CLI in `tools/`. After changing `src/library/web/static/tailwind.input.css` or any template class, rebuild the stylesheet:
+Styles are compiled with the Tailwind CLI. If `tools/tailwindcss` is missing, run `bash tools/fetch_assets.sh` first. After changing `src/library/web/static/tailwind.input.css` or any template class, rebuild the stylesheet:
 
 ```bash
 tools/tailwindcss -i src/library/web/static/tailwind.input.css -o src/library/web/static/app.css -m

@@ -1,7 +1,6 @@
-"""Merge and review rules ported from src/build_excel.py.
+"""Merge and review rules used by the importer.
 
-Pure functions only: no file or database access. Thresholds and the decision
-order are the same as in the reference script.
+Pure functions only: no file or database access.
 """
 import difflib
 import re
