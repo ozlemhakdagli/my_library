@@ -14,6 +14,11 @@
       {% if cover_error %}<p class="text-sm text-danger" role="alert">{{ cover_error }}</p>{% endif %}
       <div><button type="submit">{{ t("cover_upload") }}</button></div>
     </form>
+    {% if book.cover_file %}
+    <form method="post" action="/books/{{ book.id }}/cover/delete" onsubmit='return confirm({{ t("cover_remove_confirm")|tojson }});'>
+      <button type="submit" class="btn-secondary">{{ t("cover_remove") }}</button>
+    </form>
+    {% endif %}
   </div>
 
   <div class="grid min-w-0 content-start gap-6">
@@ -102,19 +107,6 @@
         {% endif %}
       </div>
     </dialog>
-
-    <section class="section grid gap-2">
-      <p class="eyebrow">{{ t("photos_title") }}</p>
-      {% if photos %}
-      <ul class="divide-y divide-line">
-        {% for photo in photos %}
-        <li class="py-3 text-sm [overflow-wrap:anywhere]">{{ photo.file_name }}</li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="meta">{{ t("photos_empty") }}</p>
-      {% endif %}
-    </section>
   </div>
 </div>
 {% endblock %}

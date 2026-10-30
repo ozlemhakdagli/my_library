@@ -267,22 +267,6 @@ def test_detail_shows_loan_history_with_borrower(client, db_path):
     assert "2026-10-04" in text
 
 
-def test_detail_photo_name_is_plain_text_without_server_path(client, db_path):
-    book_id = seed_detailed_book(db_path)
-    text = client.get(f"/books/{book_id}").text
-    assert "IMG 0412 Çağ Ğüş.jpg" in text
-    assert 'href="IMG' not in text
-    assert "/IMG" not in text
-    assert "IMG%200412" not in text
-    assert 'src="IMG' not in text
-
-
-def test_detail_shows_photos_heading_without_photos(client, db_path):
-    book_id = book_id_by_title(db_path, "Lonely Book")
-    text = client.get(f"/books/{book_id}").text
-    assert "Photos" in text
-
-
 def test_turkish_detail_uses_no_english_labels(client, db_path):
     book_id = seed_detailed_book(db_path)
     text = client.get(f"/books/{book_id}", params={"lang": "tr"}).text

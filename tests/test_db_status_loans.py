@@ -169,3 +169,36 @@ def test_list_loans_is_newest_first_and_includes_returned(conn, book_id):
         ("Ayşe", "2026-10-03"),
     ]
     assert set(loans[0]) == {"borrower", "lent_on", "returned_on"}
+
+
+def test_reading_dates_accept_month_and_year_only(conn, book_id):
+    from datetime import date
+
+    set_reading_status(conn, book_id, "read", "2026-02", "2026-03", today=date(2026, 10, 30))
+    row = conn.execute(
+        "SELECT started_on, finished_on FROM reading_status WHERE book_id = ?", (book_id,)
+    ).fetchone()
+    assert (row["started_on"], row["finished_on"]) == ("2026-02", "2026-03")
+
+
+def test_month_only_future_date_is_rejected(conn, book_id):
+    from datetime import date
+
+    with pytest.raises(ValueError):
+        set_reading_status(conn, book_id, "read", None, "2026-12", today=date(2026, 10, 30))
+
+
+def test_month_only_finish_before_start_is_rejected(conn, book_id):
+    from datetime import date
+
+    with pytest.raises(ValueError):
+        set_reading_status(conn, book_id, "read", "2026-05", "2026-04", today=date(2026, 10, 30))
+
+
+def test_finished_per_year_counts_month_only_dates(conn):
+    from datetime import date
+    from library.db import finished_per_year
+
+    book = add_book(conn, title="Month Only")
+    set_reading_status(conn, book, "read", None, "2025-07", today=date(2026, 10, 30))
+    assert (2025, 1) in finished_per_year(conn)

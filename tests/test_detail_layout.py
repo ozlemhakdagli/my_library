@@ -144,3 +144,23 @@ def test_reading_dates_have_no_format_hint(db_path, ids):
     _set_status(db_path, book_id, "reading")
     html = _client(db_path).get(f"/books/{book_id}").text
     assert "YYYY-MM-DD" not in html
+
+
+def test_detail_page_has_no_imported_photos_section(db_path, ids):
+    html = _client(db_path).get(f"/books/{ids['Kırmızı Kitap']}").text
+    assert "No photos." not in html
+    assert ">Photos<" not in html
+
+
+def test_month_only_saved_date_shows_as_month_field(db_path, ids):
+    book_id = ids["Kırmızı Kitap"]
+    conn = db.connect(db_path)
+    try:
+        db.set_reading_status(conn, book_id, "read", "2026-01", "2026-03", today=date(2026, 10, 17))
+        conn.commit()
+    finally:
+        conn.close()
+    html = _client(db_path).get(f"/books/{book_id}").text
+    assert re.search(r'type="month" name="finished_on" value="2026-03"', html)
+    assert re.search(r'type="month" name="started_on" value="2026-01"', html)
+    assert 'data-month-toggle' in html

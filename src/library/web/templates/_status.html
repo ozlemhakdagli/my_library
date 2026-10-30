@@ -1,3 +1,13 @@
+{% macro date_field(name, label, value) %}
+<label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
+  <span>{{ label }}</span>
+  <input type="{{ 'month' if value and value|length == 7 else 'date' }}" name="{{ name }}" value="{{ value or '' }}" data-date-field>
+  <span class="flex items-center gap-2 text-sm text-muted">
+    <input type="checkbox" data-month-toggle{% if value and value|length == 7 %} checked{% endif %}>
+    {{ t("date_month_only") }}
+  </span>
+</label>
+{% endmacro %}
 {#
   Reading status block: status strip, badge and date fields, plus any error.
   Used by detail.html and by the HTMX status route, which swaps this whole block.
@@ -24,15 +34,9 @@
   <form method="post" action="/books/{{ book.id }}/status" class="grid gap-3 sm:grid-cols-2"
         hx-post="/books/{{ book.id }}/status" hx-target="#status-{{ book.id }}" hx-swap="outerHTML">
     <input type="hidden" name="status" value="{{ current }}">
-    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-      <span>{{ t("field_started") }}</span>
-      <input type="date" name="started_on" value="{{ book.started_on or '' }}">
-    </label>
+    {{ date_field("started_on", t("field_started"), book.started_on) }}
     {% if current == "read" %}
-    <label class="grid gap-1 [&>span]:text-sm [&>span]:text-muted">
-      <span>{{ t("field_finished") }}</span>
-      <input type="date" name="finished_on" value="{{ book.finished_on or '' }}">
-    </label>
+    {{ date_field("finished_on", t("field_finished"), book.finished_on) }}
     {% endif %}
     <div class="sm:col-span-2"><button type="submit" class="btn-secondary">{{ t("btn_save_dates") }}</button></div>
   </form>

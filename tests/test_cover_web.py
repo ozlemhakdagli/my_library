@@ -1,5 +1,6 @@
 import io
 import re
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -337,3 +338,45 @@ def test_cover_history_in_english(paths, seeded):
     assert "Cover photo added" in client.get(f"/books/{book_id}").text
     client.post(f"/books/{book_id}/cover", files={"cover": ("b.jpg", JPEG, "image/jpeg")})
     assert "Cover photo changed" in client.get(f"/books/{book_id}").text
+
+
+def test_remove_cover_clears_photo_and_keeps_colour(paths, seeded):
+    client = _client(paths)
+    book_id = seeded["tinted"]
+    client.post(f"/books/{book_id}/cover", files={"cover": ("new.jpg", JPEG, "image/jpeg")})
+    assert (Path(paths["covers"]) / f"{book_id}.jpg").is_file()
+
+    colour_before = _cover_row(paths, book_id)[1]
+
+    response = client.post(f"/books/{book_id}/cover/delete")
+
+    assert response.status_code == 303
+    assert _cover_row(paths, book_id) == (None, colour_before)
+    assert not (Path(paths["covers"]) / f"{book_id}.jpg").exists()
+    assert client.get(f"/covers/{book_id}").status_code == 404
+    conn = db.connect(paths["db"])
+    try:
+        fields = [h["field"] for h in db.get_history(conn, book_id)]
+    finally:
+        conn.close()
+    assert fields.count("cover") == 2
+
+
+def test_remove_cover_on_book_without_cover_is_a_no_op(paths, seeded):
+    client = _client(paths)
+    response = client.post(f"/books/{seeded['plain']}/cover/delete")
+    assert response.status_code == 303
+    assert _cover_row(paths, seeded["plain"])[0] is None
+
+
+def test_remove_cover_on_missing_book_is_404(paths):
+    response = _client(paths).post("/books/999/cover/delete")
+    assert response.status_code == 404
+
+
+def test_remove_button_only_shows_when_book_has_a_photo(paths, seeded):
+    client = _client(paths)
+    book_id = seeded["plain"]
+    assert "/cover/delete" not in client.get(f"/books/{book_id}").text
+    client.post(f"/books/{book_id}/cover", files={"cover": ("new.jpg", JPEG, "image/jpeg")})
+    assert f'action="/books/{book_id}/cover/delete"' in client.get(f"/books/{book_id}").text

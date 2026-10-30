@@ -794,7 +794,6 @@ def create_app(
             if book is None:
                 raise HTTPException(status_code=404)
             history = db.get_history(conn, book_id)
-            photos = db.list_photos(conn, book_id)
             loans = db.list_loans(conn, book_id)
             assignments = _assignments(conn, book_id)
             shelf_name = db.book_card_extras(conn, [book_id]).get(book_id, {}).get("shelf")
@@ -808,7 +807,6 @@ def create_app(
             book=book,
             book_id=book_id,
             history=history,
-            photos=photos,
             loans=loans,
             cover_error=cover_error,
             suggestions=suggestions,
@@ -986,6 +984,16 @@ def create_app(
                 db.set_book_cover(conn, book_id, file_name, color)
         if error is not None:
             return _detail_response(request, book_id, lang, status_code=400, cover_error=error)
+        return RedirectResponse(f"/books/{book_id}", status_code=303)
+
+    @app.post("/books/{book_id}/cover/delete", response_model=None)
+    def book_cover_remove(book_id: int) -> RedirectResponse:
+        with _open_db(settings) as conn:
+            if db.get_book(conn, book_id) is None:
+                raise HTTPException(status_code=404)
+            old_file = db.clear_book_cover(conn, book_id)
+        if old_file is not None:
+            Path(covers.cover_path(settings.cover_dir, old_file)).unlink(missing_ok=True)
         return RedirectResponse(f"/books/{book_id}", status_code=303)
 
     @app.get("/covers/{book_id}")

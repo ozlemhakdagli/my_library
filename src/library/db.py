@@ -578,9 +578,12 @@ class ReadingDateError(ValueError):
 
 
 def _parse_reading_date(value: str, today: date | None = None) -> date:
-    """Parse a YYYY-MM-DD date. With ``today``, also reject dates after it."""
+    """Parse a YYYY-MM-DD or YYYY-MM date (a month is compared as its first day).
+
+    With ``today``, also reject dates after it.
+    """
     try:
-        parsed = date.fromisoformat(value)
+        parsed = date.fromisoformat(value + "-01" if len(value) == 7 else value)
     except ValueError:
         raise ReadingDateError("err_invalid_date") from None
     if today is not None and parsed > today:
@@ -605,7 +608,7 @@ def set_reading_status(
     """Set reading status and dates; one history row per changed field.
 
     An empty or missing date keeps the stored value. Given dates must be
-    YYYY-MM-DD and not after ``today`` (default: the current date). The
+    YYYY-MM-DD or YYYY-MM and not after ``today`` (default: the current date). The
     finished date may not be earlier than the started date. Invalid dates
     raise ``ReadingDateError`` (a ``ValueError``) and nothing is written.
     """
@@ -986,6 +989,23 @@ def set_book_cover(
         _write_history(
             conn, book_id, [HistoryEntry("cover", book["cover_file"], cover_file)], ts
         )
+
+
+def clear_book_cover(conn: sqlite3.Connection, book_id: int) -> str | None:
+    """Drop a book's cover file name, keeping its colour. Returns the removed file name, if any."""
+    ts = _now()
+    with conn:
+        book = _live_book(conn, book_id)
+        if book is None:
+            raise ValueError(f"book {book_id} not found")
+        old = book["cover_file"]
+        if old is None:
+            return None
+        conn.execute(
+            "UPDATE book SET cover_file = NULL, updated_at = ? WHERE id = ?", (ts, book_id)
+        )
+        _write_history(conn, book_id, [HistoryEntry("cover", old, None)], ts)
+    return old
 
 
 def set_book_types(conn: sqlite3.Connection, book_id: int, type_ids: list[int]) -> None:
