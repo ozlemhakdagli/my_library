@@ -47,7 +47,7 @@ Settings are read from `.env`. The file is not committed.
 | :--- | :--- | :--- |
 | `LIBRARY_RAW_DIR` | `./data/raw` | Folder with the raw import data. Mounted read-only at `/raw` inside the container. |
 | `LIBRARY_LLM_URL` | `http://host.docker.internal:1234/v1` | Address of the OpenAI-compatible server used by the assistant. |
-| `LIBRARY_LLM_MODEL` | empty | Model name to request from that server. |
+| `LIBRARY_LLM_MODEL` | empty | Model identifier to request from that server. Empty means the model currently loaded in LM Studio. |
 | `LIBRARY_LLM_TIMEOUT` | `60` | Seconds to wait for the assistant before giving up. |
 
 ## Language
@@ -56,7 +56,13 @@ English is the default. Switch to Turkish with `?lang=tr`, for example http://lo
 
 ## Local AI assistant
 
-The assistant answers questions such as "which books by this author do I have?" and suggests similar books. It uses a language model you run yourself, for example with LM Studio on the host machine. Start the local server, load a model, and set `LIBRARY_LLM_MODEL` to its name. If the server is not running, the rest of the app works normally.
+The assistant answers questions such as "which books by this author do I have?" and suggests similar books. It uses a language model you run yourself, for example with LM Studio on the host machine. Start the LM Studio local server on port 1234 and load a model. Then set `LIBRARY_LLM_MODEL` to the model's identifier as LM Studio shows it. The tested model is `google/gemma-4-12b-qat` (Gemma 4 12B, QAT Q4_0 GGUF), so the setting would look like this in `.env`:
+
+```bash
+LIBRARY_LLM_MODEL=google/gemma-4-12b-qat
+```
+
+If the server is not running, the rest of the app works normally.
 
 ## Importing the raw data
 
