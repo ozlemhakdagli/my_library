@@ -161,3 +161,12 @@ def test_types_question_sends_counts_to_the_summary(db_path):
     assert "Books per type" in summary_user_message
     assert "event: table" in response.text
     assert "Books per type" not in response.text
+
+
+def test_summary_input_marks_books_without_status_as_unread():
+    from library.web.app import _ask_summary_input
+
+    books = [{"title": "Gece Yarısı Kütüphanesi", "authors": ["Matt Haig"], "status": None}]
+    text = _ask_summary_input("gece yarısı kütüphanesi okudu mu", books)
+    assert "status: unread" in text
+    assert "none" not in text

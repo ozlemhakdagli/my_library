@@ -283,7 +283,7 @@ def _ask_summary_input(question: str, books: list[dict]) -> str:
         lines.append("(none)")
     for book in books:
         authors = ", ".join(book["authors"]) or "-"
-        lines.append(f"- title: {book['title']} | authors: {authors} | status: {book['status'] or 'none'}")
+        lines.append(f"- title: {book['title']} | authors: {authors} | status: {book['status'] or 'unread'}")
     return "\n".join(lines)
 
 
