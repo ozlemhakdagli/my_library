@@ -99,6 +99,10 @@ docker compose down
 
 This keeps the `library-data` volume, so your data is preserved. Do not add `-v`, which deletes the volume.
 
+## License
+
+Copyright ozlemhakdagli. Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE).
+
 ## Development
 
 Requires Python 3.12 or newer.
